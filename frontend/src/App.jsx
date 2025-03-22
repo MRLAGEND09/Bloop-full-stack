@@ -15,7 +15,7 @@ import Verify from './pages/verify.jsx'
 import Navbar from './components/navbar.jsx';
 import SearchBar from './components/searchBar.jsx';
 import Footer from './components/footer.jsx';
-const App = () => {
+const app = () => {
   return (
     <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
       <ToastContainer />
@@ -39,4 +39,4 @@ const App = () => {
   )
 }
 
-export default App
+export default app
