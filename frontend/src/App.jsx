@@ -2,19 +2,19 @@ import React from 'react'
 import {Routes,Route} from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Home from './Pages/Home.jsx'
-import Collection from './Pages/Collection.jsx'
-import Contact from './Pages/Contact.jsx'
-import Login from './Pages/Login.jsx'
-import About from './pages/About.jsx'
-import Cart from './Pages/Cart.jsx'
-import Order from './Pages/Order.jsx'
-import Product from './Pages/Product.jsx'
-import PlaceOrder from './Pages/PlaceOrder.jsx'
-import Verify from './pages/Verify.jsx'
-import Navbar from './components/Navbar.jsx';
-import SearchBar from './Components/SearchBar.jsx';
-import Footer from './Components/Footer.jsx';
+import Home from './pages/Home.jsx'
+import Collection from './pages/collection.jsx'
+import Contact from './pages/contact.jsx'
+import Login from './pages/login.jsx'
+import About from './pages/about.jsx'
+import Cart from './pages/cart.jsx'
+import Order from './pages/order.jsx'
+import Product from './pages/product.jsx'
+import PlaceOrder from './pages/placeOrder.jsx'
+import Verify from './pages/verify.jsx'
+import Navbar from './components/navbar.jsx';
+import SearchBar from './components/searchBar.jsx';
+import Footer from './components/footer.jsx';
 const App = () => {
   return (
     <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
