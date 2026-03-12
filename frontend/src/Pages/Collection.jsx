@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from 'react'
 import { assets } from '../assets/assets'
 import Title from '../Components/Title'
 import ProductItem from '../Components/ProductItem'
-import { ShopContext } from '../Context/ShopContext'
+import { ShopContext } from '../context/ShopContext'
 
 const Collection = () => {
   const { products, search, showSearch } = useContext(ShopContext)
@@ -69,6 +69,24 @@ const Collection = () => {
     // eslint-disable-next-line
   }, [sortType])
 
+
+ // Nedd to login to access collection page.
+ 
+  useEffect(() => {
+  if (!token) {
+    const timer = setTimeout(() => {
+      navigate('/login')
+      toast.info('Please login to continue shopping😊')
+    }, 60000) // 1 minute
+    return () => clearTimeout(timer)
+  }
+
+
+
+
+
+}, [token])
+
   return (
     <div className='flex flex-col sm:flex-row gap-1 sm:gap-10 pt-10 border-t'>
       {/* filter options */}
@@ -123,7 +141,7 @@ const Collection = () => {
         {/* map products */}
         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 gap-y-6'>
           {filterproducts.map((item) => (
-            <ProductItem key={item._id} id={item._id} image={item.image} name={item.name} price={item.price} />
+           <ProductItem key={item._id} id={item._id} image={item.image} name={item.name} price={item.price} discount={item.discount} discountActive={item.discountActive} />
           ))}
         </div>
       </div>

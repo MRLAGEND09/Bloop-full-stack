@@ -106,4 +106,42 @@ const useCoupon = async (req, res) => {
     }
 }
 
-export { subscribeUser, validateCoupon, useCoupon }
+// Get all subscribers
+const getSubscribers = async (req, res) => {
+    try {
+        const subscribers = await subscriberModel.find({})
+        res.json({ success: true, subscribers })
+    } catch (error) {
+        res.json({ success: false, message: error.message })
+    }
+}
+
+// Manual coupon generate by admin
+const manualCoupon = async (req, res) => {
+    try {
+        const { email } = req.body
+
+        const subscriber = await subscriberModel.findOne({ email })
+        if (!subscriber) {
+            return res.json({ success: false, message: 'Subscriber not found!' })
+        }
+
+        const couponCode = generateCoupon()
+        const expiresAt = new Date()
+        expiresAt.setMonth(expiresAt.getMonth() + 2)
+
+        await subscriberModel.findOneAndUpdate(
+            { email },
+            { couponCode, isUsed: false, expiresAt }
+        )
+
+        await sendEmail(email, couponCode, expiresAt)
+
+        res.json({ success: true, message: 'New coupon sent to subscriber!' })
+
+    } catch (error) {
+        res.json({ success: false, message: error.message })
+    }
+}
+
+export { subscribeUser, validateCoupon, useCoupon, getSubscribers, manualCoupon }

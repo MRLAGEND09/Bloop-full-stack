@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios'
 
-// Fixed typo here
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const ShopContext = createContext();
 
@@ -38,7 +37,8 @@ const ShopContextProvider = (props) => {
             cartData[itemId] = {};
             cartData[itemId][size] = 1;
         }
-        setCartItems(cartData);
+        setCartItems(cartData)
+        toast.success('Item added to cart! ');
 
         if (token) {
             try {
@@ -81,6 +81,14 @@ const ShopContextProvider = (props) => {
         }
     }
 
+    // ----- Get product price (with discount) -----
+    const getProductPrice = (product) => {
+        if (product.discountActive && product.discount > 0) {
+            return product.price - (product.price * product.discount / 100)
+        }
+        return product.price
+    }
+
     // ----- Get total cart amount -----
     const getCartAmount = () => {
         let totalAmount = 0;
@@ -89,7 +97,8 @@ const ShopContextProvider = (props) => {
             for (const item in cartItems[items]) {
                 try {
                     if (cartItems[items][item] > 0) {
-                        totalAmount += itemInfo.price * cartItems[items][item]
+                        const price = getProductPrice(itemInfo)
+                        totalAmount += price * cartItems[items][item]
                     }
                 } catch (error) { }
             }
@@ -141,7 +150,8 @@ const ShopContextProvider = (props) => {
         search, setSearch, showSearch, setShowSearch,
         cartItems, addToCart, setCartItems,
         getCartCount, updateQuantity,
-        getCartAmount, navigate, backendUrl,
+        getCartAmount, getProductPrice,
+        navigate, backendUrl,
         setToken, token
     }
 

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
-import Titel from './Title'
-import ProductItem from './ProductItem'
-import { ShopContext } from '../Context/ShopContext'
+import Titel from '../Components/Title'
+import ProductItem from '../Components/ProductItem'
+import { ShopContext } from '../context/ShopContext'
 
 const BestSeller = () => {
   const { products } = useContext(ShopContext)
@@ -28,6 +28,8 @@ const BestSeller = () => {
             image={item.image}
             name={item.name}
             price={item.price}
+            discount={item.discount}
+            discountActive={item.discountActive}
           />
         ))}
       </div>

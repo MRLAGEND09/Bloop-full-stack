@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-
 const productSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String, required: true },
@@ -10,6 +9,8 @@ const productSchema = new mongoose.Schema({
     subCategory: { type: String, required: true },
     sizes: { type: Array, required: true },
     bestseller: { type: Boolean },
+    discount: { type: Number, default: 0 },
+    discountActive: { type: Boolean, default: false },
     date: { type: Number, required: true }
 })
 

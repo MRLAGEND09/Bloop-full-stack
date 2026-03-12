@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import Title from '../Components/Title'
 import axios from 'axios'
-import { ShopContext } from '../Context/ShopContext'
+import { ShopContext } from '../context/ShopContext'
 
 const Order = () => {
 
@@ -23,8 +23,9 @@ const Order = () => {
             item['payment'] = order.payment
             item['paymentMethod'] = order.paymentMethod
             item['date'] = order.date
-            allOrdersItem.push(item)
+            item['amount'] = order.amount
           })
+          allOrdersItem.push(...order.items)
         })
         setOrderData(allOrdersItem.reverse())
       }
@@ -51,16 +52,16 @@ const Order = () => {
                 <img className='w-16 sm:w-20' src={item.image[0]} alt="" />
                 <div>
                   <p className='sm:text-base font-medium'>{item.name}</p>
-                  <div className='flex items-center gap-3 mt-1 text-base text-gray-700'>
-                    <p>{currency}{item.price}</p>
-                    <p>Quantity: {item.quantity}</p>
-                    <p>Size: {item.size}</p>
-                  </div>
+                  <p className='mt-1 text-base text-gray-700'>
+                    {currency}{item.price} | Quantity: {item.quantity} | Size: {item.size}
+                  </p>
                   <p className='mt-1'>Date: <span className='text-gray-400'>{new Date(item.date).toDateString()}</span></p>
                   <p className='mt-1'>Payment Method: <span className='text-gray-400'>{item.paymentMethod}</span></p>
+                  <p className='mt-1'>Delivery Fee: <span className='text-gray-400'>{currency}70</span></p>
+                  <p className='mt-1 font-medium'>Total Amount: <span className='text-black'>{currency}{item.amount}</span></p>
                 </div>
               </div>
-              <div className='flex justify-end w-full md:w-auto'>
+              <div className='flex justify-end w-full'>
                 <div className='flex items-center gap-2'>
                   <p className={`min-w-2 h-2 rounded-full ${
                     item.status === 'Delivered' ? 'bg-green-500' :

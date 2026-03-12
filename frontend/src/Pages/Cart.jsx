@@ -2,10 +2,10 @@ import React, { useContext, useEffect, useState } from 'react'
 import Title from '../Components/Title'
 import { assets } from '../assets/assets'
 import CartTotal from '../Components/CartTotal'
-import { ShopContext } from '../Context/ShopContext'
+import { ShopContext } from '../context/ShopContext'
 
 const Cart = () => {
-  const { products, currency, cartItems, updateQuantity, navigate } = useContext(ShopContext)
+  const { products, currency, cartItems, updateQuantity, navigate, getProductPrice } = useContext(ShopContext)
   const [cartData, setCartData] = useState([])
 
   useEffect(() => {
@@ -32,18 +32,48 @@ const Cart = () => {
         <Title text1={'YOUR'} text2={'CART'} />
       </div>
 
+      {/* Notification Message */}
+      {cartData.length > 0 && (
+        <div className='bg-yellow-50 border border-yellow-200 rounded p-3 mb-4 flex items-center gap-2 text-sm text-yellow-800'>
+          <i className='fas fa-info-circle text-yellow-500'></i>
+          <p>Items in your cart are not reserved. Complete your order before they sell out!</p>
+        </div>
+      )}
+
       <div>
         {cartData.map((item, index) => {
           const productData = products.find((product) => product._id === item._id)
           if (!productData) return null
+
+          const originalPrice = productData.price
+          const finalPrice = getProductPrice(productData)
+          const hasDiscount = productData.discountActive && productData.discount > 0
+
           return (
             <div key={index} className='py-4 border-t border-b text-gray-700 grid grid-cols-[4fr_0.5fr_0.5fr] sm:grid-cols-[4fr_2fr_0.5fr] items-center gap-4'>
               <div className='flex items-start gap-6'>
-                <img className='w-16 sm:w-20' src={productData.image[0]} alt="" />
+                <div className='relative'>
+                  <img className='w-16 sm:w-20' src={productData.image[0]} alt="" />
+                  {hasDiscount && (
+                    <span className='absolute top-0 left-0 bg-red-500 text-white text-xs px-1 rounded'>
+                      {productData.discount}% OFF
+                    </span>
+                  )}
+                </div>
                 <div>
                   <p className='text-xs sm:text-lg font-medium'>{productData.name}</p>
-                  <div className='flex items-center gap-5 mt-2'>
-                    <p>{currency}{productData.price}</p>
+                  <div className='flex items-center gap-3 mt-2'>
+                    {hasDiscount ? (
+                      <div className='flex items-center gap-2'>
+                        <p className='text-red-500 font-medium'>{currency}{finalPrice.toFixed(2)}</p>
+                        <p className='text-gray-400 line-through text-xs'>{currency}{originalPrice}</p>
+                        <span className='bg-red-100 text-red-500 text-xs px-1 rounded'>
+                          Save {currency}{(originalPrice - finalPrice).toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <p>{currency}{originalPrice}</p>
+                    )}
                     <p className='px-2 sm:px-3 sm:py-1 border bg-slate-50'>{item.size}</p>
                   </div>
                 </div>
