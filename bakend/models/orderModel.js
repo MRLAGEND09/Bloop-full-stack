@@ -13,6 +13,16 @@ const orderSchema = new mongoose.Schema({
     couponDiscount: { type: Number, default: 0 },
     couponCode: { type: String, default: "" },
     productDiscount: { type: Number, default: 0 },
+    // Order Accept/Reject
+    accepted: { type: String, default: 'pending', enum: ['pending', 'accepted', 'rejected'] },
+    rejectedReason: { type: String, default: "" },
+    // Payment
+    paidAt: { type: Date, default: null },
+    paidBy: { type: String, default: "" },
+    // Delivery
+    deliveredAt: { type: Date, default: null },
+    // Bill Voucher
+    invoiceNumber: { type: String, default: "" },
 })
 
 const orderModel = mongoose.models.order || mongoose.model('order', orderSchema)
