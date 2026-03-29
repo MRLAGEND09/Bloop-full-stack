@@ -3,9 +3,11 @@ import Title from '../components/Title'
 import { assets } from '../assets/assets'
 import CartTotal from '../components/CartTotal'
 import { ShopContext } from '../context/ShopContext'
+import axios from 'axios'
+import '@fortawesome/fontawesome-free/css/all.min.css'
 
 const Cart = () => {
-  const { products, currency, cartItems, updateQuantity, navigate, getProductPrice } = useContext(ShopContext)
+  const { products, currency, cartItems, updateQuantity, navigate, getProductPrice, token, backendUrl } = useContext(ShopContext)
   const [cartData, setCartData] = useState([])
 
   useEffect(() => {
@@ -25,6 +27,22 @@ const Cart = () => {
       setCartData(tempData)
     }
   }, [cartItems, products])
+
+  // Cart empty হলে abandoned cart delete করো
+  useEffect(() => {
+    const clearAbandoned = async () => {
+      if (!token) return
+      const isEmpty = cartData.length === 0
+      if (isEmpty) {
+        try {
+          await axios.post(backendUrl + '/api/abandoned/clear', {}, { headers: { token } })
+        } catch (error) {
+          console.log(error)
+        }
+      }
+    }
+    clearAbandoned()
+  }, [cartData, token])
 
   return (
     <div className='border-t pt-14'>
