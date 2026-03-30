@@ -103,7 +103,7 @@ const sendOrderConfirmationEmail = async (order, address) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>FOREVER</h1>
+                    <h1>BLOOP</h1>
                     <p style="color: #ccc; margin: 5px 0 0;">Fashion & Style</p>
                 </div>
                 <div class="body">
@@ -148,7 +148,7 @@ const sendOrderConfirmationEmail = async (order, address) => {
                     ${getTotalHTML(order)}
                 </div>
                 <div class="footer">
-                    <p>Thank you for shopping with FOREVER!</p>
+                    <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
                 </div>
             </div>
@@ -156,7 +156,7 @@ const sendOrderConfirmationEmail = async (order, address) => {
         </html>`
 
         await transporter.sendMail({
-            from: `"FOREVER Fashion" <${process.env.EMAIL_USER}>`,
+            from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
             to: address.email,
             subject: `✅ Order Received - ${order.invoiceNumber}`,
             html: emailHTML
@@ -178,7 +178,7 @@ const sendOrderAcceptedEmail = async (order) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>FOREVER</h1>
+                    <h1>BLOOP</h1>
                     <p style="color: #ccc; margin: 5px 0 0;">Fashion & Style</p>
                 </div>
                 <div class="body">
@@ -223,7 +223,7 @@ const sendOrderAcceptedEmail = async (order) => {
                     ${getTotalHTML(order)}
                 </div>
                 <div class="footer">
-                    <p>Thank you for shopping with FOREVER!</p>
+                    <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
                 </div>
             </div>
@@ -231,7 +231,7 @@ const sendOrderAcceptedEmail = async (order) => {
         </html>`
 
         await transporter.sendMail({
-            from: `"FOREVER Fashion" <${process.env.EMAIL_USER}>`,
+            from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
             to: address.email,
             subject: `🎉 Order Confirmed - ${order.invoiceNumber}`,
             html: emailHTML
@@ -253,7 +253,7 @@ const sendOrderDeliveredEmail = async (order) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>FOREVER</h1>
+                    <h1>BLOOP</h1>
                     <p style="color: #ccc; margin: 5px 0 0;">Fashion & Style</p>
                 </div>
                 <div class="body">
@@ -303,7 +303,7 @@ const sendOrderDeliveredEmail = async (order) => {
                     </div>
                 </div>
                 <div class="footer">
-                    <p>Thank you for shopping with FOREVER!</p>
+                    <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
                 </div>
             </div>
@@ -311,7 +311,7 @@ const sendOrderDeliveredEmail = async (order) => {
         </html>`
 
         await transporter.sendMail({
-            from: `"FOREVER Fashion" <${process.env.EMAIL_USER}>`,
+            from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
             to: address.email,
             subject: `📦 Order Delivered - ${order.invoiceNumber}`,
             html: emailHTML
