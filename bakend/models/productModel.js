@@ -11,6 +11,8 @@ const productSchema = new mongoose.Schema({
     bestseller: { type: Boolean },
     discount: { type: Number, default: 0 },
     discountActive: { type: Boolean, default: false },
+    rating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
     date: { type: Number, required: true }
 })
 

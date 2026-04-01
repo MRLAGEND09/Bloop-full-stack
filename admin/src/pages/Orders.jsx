@@ -2,12 +2,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { bakendUrl, currency } from '../App';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 import { assets } from '../assets/assets';
-import '@fortawesome/fontawesome-free/css/all.min.css'
 import notificationSound from '../assets/notification.mp3'
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Orders = ({ token, setNewOrderCount }) => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [selectedOrders, setSelectedOrders] = useState([])
   const [bulkStatus, setBulkStatus] = useState('Shipped')
@@ -118,6 +121,98 @@ const Orders = ({ token, setNewOrderCount }) => {
     }
   }
 
+  const generateBillPDF = (order) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text('BLOOP - Bill Voucher', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Order ID: ' + order._id, 20, 35);
+    doc.text('Date: ' + new Date(order.date).toLocaleDateString(), 20, 45);
+
+    // Customer Details
+    doc.setFontSize(14);
+    doc.text('Customer Details:', 20, 60);
+    doc.setFontSize(10);
+    doc.text('Name: ' + order.address.firstName + ' ' + order.address.lastName, 20, 70);
+    doc.text('Address: ' + order.address.street + ', ' + order.address.city + ', ' + order.address.country + ', ' + order.address.zipcode, 20, 80);
+    doc.text('Phone: ' + order.address.phone, 20, 90);
+    doc.text('Email: ' + order.address.email, 20, 100);
+
+    // Order Items Table
+    const tableColumn = ["Item", "Size", "Quantity", "Price", "Total"];
+    const tableRows = [];
+
+    order.items.forEach(item => {
+      const itemData = [
+        item.name,
+        item.size,
+        item.quantity,
+        currency + item.price,
+        currency + (item.price * item.quantity)
+      ];
+      tableRows.push(itemData);
+    });
+
+    doc.autoTable(tableColumn, tableRows, { startY: 110 });
+
+    // Totals
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.text('Subtotal: ' + currency + order.amount, 140, finalY);
+    if (order.couponDiscount > 0) {
+      doc.text('Coupon Discount: -' + currency + order.couponDiscount, 140, finalY + 10);
+    }
+    doc.setFontSize(12);
+    doc.text('Total: ' + currency + (order.amount - (order.couponDiscount || 0)), 140, finalY + 20);
+
+    // Payment Info
+    doc.text('Payment Method: ' + order.paymentMethod, 20, finalY + 30);
+    doc.text('Payment Status: ' + (order.payment ? 'Paid' : 'Pending'), 20, finalY + 40);
+    doc.text('Order Status: ' + order.status, 20, finalY + 50);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text('Thank you for shopping with BLOOP!', 105, finalY + 70, { align: 'center' });
+
+    // Save the PDF
+    doc.save(`Bill_Voucher_${order._id}.pdf`);
+    toast.success('Bill PDF generated successfully!');
+  }
+
+  const markPaymentDone = async (orderId, order) => {
+    try {
+      const response = await axios.post(`${bakendUrl}/api/order/mark-paid`, { orderId }, { headers: { token } });
+      if (response.data.success) {
+        setOrders(prevOrders =>
+          prevOrders.map(o =>
+            o._id === orderId
+              ? { ...o, payment: true }
+              : o
+          )
+        );
+
+        const sendTo = window.prompt('Send invoice to (type email or phone):', 'email');
+        if (sendTo && (sendTo === 'email' || sendTo === 'phone')) {
+          try {
+            await axios.post(`${bakendUrl}/api/order/send-invoice`, { orderId, method: sendTo }, { headers: { token } })
+            toast.success(`Invoice sent by ${sendTo} successfully!`)
+          } catch (e) {
+            toast.error('Invoice send failed: ' + e.message)
+          }
+        }
+
+        toast.success("Payment marked as done!");
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    }
+  }
+
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Order Placed': return 'text-yellow-500'
@@ -168,8 +263,7 @@ const Orders = ({ token, setNewOrderCount }) => {
               onClick={bulkStatusUpdate}
               className='bg-black text-white text-sm px-4 py-2 rounded'
             >
-              <i className='fas fa-check mr-1'></i>
-              Update {selectedOrders.length} Orders
+              ✅ Update {selectedOrders.length} Orders
             </button>
             <button
               onClick={() => setSelectedOrders([])}
@@ -225,8 +319,7 @@ const Orders = ({ token, setNewOrderCount }) => {
                 </div>
                 <p>{order.address.phone}</p>
                 <p className='text-blue-500 mt-1'>
-                  <i className="fas fa-envelope mr-1"></i>
-                  {order.address.email}
+                  📧 {order.address.email}
                 </p>
               </div>
 
@@ -234,6 +327,15 @@ const Orders = ({ token, setNewOrderCount }) => {
                 <p className='text-sm sm:text-[15px]'>Items: {order.items.length}</p>
                 <p className='mt-3'>Method: {order.paymentMethod}</p>
                 <p>Payment: {order.payment ? 'Done' : 'Pending'}</p>
+                {order.status !== 'Cancelled' && !order.payment && (
+                  <button
+                    onClick={() => markPaymentDone(order._id)}
+                    className='bg-green-500 text-white text-xs px-2 py-1 rounded mt-1 hover:bg-green-600 flex items-center gap-1'
+                  >
+                    <i className='fas fa-receipt'></i>
+                    Mark Paid
+                  </button>
+                )}
                 <p>Date: {new Date(order.date).toLocaleDateString()}</p>
               </div>
 
@@ -241,14 +343,12 @@ const Orders = ({ token, setNewOrderCount }) => {
                 <p className='text-sm sm:text-[15px] font-medium'>{currency}{order.amount}</p>
                 {hasProductDiscount && (
                   <p className='text-red-500 text-xs mt-1'>
-                    <i className="fas fa-tag mr-1"></i>
-                    Product discount applied
+                     Product discount applied
                   </p>
                 )}
                 {order.couponDiscount > 0 && (
                   <p className='text-blue-500 text-xs mt-1'>
-                    <i className="fas fa-ticket-alt mr-1"></i>
-                    Coupon: -{currency}{order.couponDiscount}
+                     Coupon: -{currency}{order.couponDiscount}
                   </p>
                 )}
                 <p className={`text-xs mt-2 font-semibold ${getStatusColor(order.status)}`}>
@@ -273,6 +373,29 @@ const Orders = ({ token, setNewOrderCount }) => {
                     Reason: {order.cancelReason}
                   </p>
                 )}
+                <div className='flex flex-wrap gap-2 mt-2'>
+                  <button
+                    onClick={() => navigate(`/order/${order._id}`)}
+                    className='bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700'
+                  >
+                     View Details
+                  </button>
+                  <button
+                    onClick={() => generateBillPDF(order)}
+                    className='bg-blue-500 text-white text-xs px-3 py-1 rounded hover:bg-blue-600'
+                  >
+                    📋 PDF
+                  </button>
+                  {order.status !== 'Cancelled' && !order.payment && (
+                    <button
+                      onClick={() => markPaymentDone(order._id, order)}
+                      className='bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600 flex items-center gap-1'
+                    >
+                      <i className='fas fa-receipt'></i>
+                      ✅ Mark Paid + Send Invoice
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )

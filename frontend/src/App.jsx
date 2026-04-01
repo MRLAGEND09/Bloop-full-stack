@@ -17,6 +17,8 @@ import Verify from "./Pages/Verify";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import ScrollToTop from "./components/ScrollToTop"; 
 import Profile from './Pages/Profile'
+import Wishlist from './Pages/Wishlist'
+import ProtectedRoute from './components/ProtectedRoute'
 
 const App = () => {
   return (
@@ -26,7 +28,7 @@ const App = () => {
       <Navbar />
       <SearchBar />
       <Routes>
-        <Route path='/profile' element={<Profile />} />
+        <Route path='/profile' element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/" element={<Home />} />
         <Route path="/collection" element={<Collection />} />
         <Route path="/about" element={<About />} />
@@ -34,9 +36,10 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/product/:Productid" element={<Product />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/place-order" element={<PlaceOrder />} />
-        <Route path="/order" element={<Order />} />
+        <Route path="/place-order" element={<ProtectedRoute><PlaceOrder /></ProtectedRoute>} />
+        <Route path="/order" element={<ProtectedRoute><Order /></ProtectedRoute>} />
         <Route path="/verify" element={<Verify />} />
+        <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
       </Routes>
       <Footer />
     </div>

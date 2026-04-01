@@ -150,6 +150,9 @@ const sendOrderConfirmationEmail = async (order, address) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
+                    <p>Order link: <a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}" target="_blank">${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}</a></p>
+                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
+                    <p>Support Phone: ${process.env.SUPPORT_PHONE || '+8801700000000'}</p>
                 </div>
             </div>
         </body>
@@ -225,6 +228,7 @@ const sendOrderAcceptedEmail = async (order) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
+                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
                 </div>
             </div>
         </body>
@@ -237,6 +241,65 @@ const sendOrderAcceptedEmail = async (order) => {
             html: emailHTML
         })
         console.log('Order accepted email sent to:', address.email)
+    } catch (error) {
+        console.log('Email error:', error)
+    }
+}
+
+// Send invoice/bill voucher email
+const sendInvoiceEmail = async (order) => {
+    try {
+        const address = order.address
+        const emailHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><style>${emailStyles}</style></head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>BLOOP</h1>
+                    <p style="color: #ccc; margin: 5px 0 0;">Fashion & Style</p>
+                </div>
+                <div class="body">
+                    <p style="color: #999; font-size: 13px;">Invoice: ${order.invoiceNumber}</p>
+                    <div class="badge" style="background: #fff3e0; border: 1px solid #ffb300;">
+                        <p style="color: #ef6c00; margin: 0; font-size: 16px; font-weight: bold;">🧾 Bill Voucher Ready!</p>
+                    </div>
+                    <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
+                    <p style="color: #666; font-size: 14px;">Your payment has been confirmed and your bill voucher is attached. Please find details below.</p>
+
+                    <div class="info-grid">
+                        <div class="info-box"><h4>Order Date</h4><p>${new Date(order.date).toLocaleDateString()}</p></div>
+                        <div class="info-box"><h4>Payment Method</h4><p>${order.paymentMethod}</p></div>
+                        <div class="info-box"><h4>Total</h4><p>${currency}${order.amount}</p></div>
+                    </div>
+
+                    <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
+                    <table>
+                        <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
+                        <tbody>${getItemsHTML(order.items)}</tbody>
+                    </table>
+                    ${getTotalHTML(order)}
+
+                    <p style="margin-top:25px;">Share your experience:<br /><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
+                </div>
+
+                <div class="footer">
+                    <p>Thank you for shopping with BLOOP!</p>
+                    <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
+                    <p>Support Phone: ${process.env.SUPPORT_PHONE || '+8801700000000'}</p>
+                </div>
+            </div>
+        </body>
+        </html>`
+
+        await transporter.sendMail({
+            from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
+            to: address.email,
+            subject: `🧾 Your Bill Voucher - ${order.invoiceNumber}`,
+            html: emailHTML
+        })
+        console.log('Bill voucher email sent to:', address.email)
     } catch (error) {
         console.log('Email error:', error)
     }
@@ -305,6 +368,9 @@ const sendOrderDeliveredEmail = async (order) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
+                    <p>Order link: <a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}" target="_blank">${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}</a></p>
+                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
+                    <p>Support Phone: ${process.env.SUPPORT_PHONE || '+8801700000000'}</p>
                 </div>
             </div>
         </body>
@@ -319,6 +385,104 @@ const sendOrderDeliveredEmail = async (order) => {
         console.log('Order delivered email sent to:', address.email)
     } catch (error) {
         console.log('Email error:', error)
+    }
+}
+
+// Send SMS receipt
+const sendSMSReceipt = async (order, phone, customText) => {
+    try {
+        // Validate phone number
+        if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+            console.log('SMS skipped: Phone number is empty or invalid')
+            return false
+        }
+
+        const baseMessage = `Order Confirmed! Order ID: ${order.invoiceNumber}. Total: ৳${order.amount}.`;
+        const reviewLink = ` Review: ${process.env.WEBSITE_URL || 'https://bloop.com'}/review/order/${order._id}`;
+        const smsMessage = customText || (baseMessage + reviewLink + ' Thank you for shopping with BLOOP!');
+
+        const provider = (process.env.SMS_PROVIDER || 'log').toLowerCase();
+
+        // Log-only mode (debug/demo)
+        if (provider === 'log') {
+            console.log(`\n📱 [SMS LOG MODE] To: ${phone}`)
+            console.log(`📝 Message: ${smsMessage}\n`)
+            return true
+        }
+
+        if (provider === 'twilio') {
+            const accountSid = process.env.TWILIO_ACCOUNT_SID;
+            const authToken = process.env.TWILIO_AUTH_TOKEN;
+            const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+            if (!accountSid || !authToken || !fromNumber) {
+                console.log('⚠️ Twilio credentials missing in .env');
+                console.log('SMS skipped: Set SMS_PROVIDER=log for demo mode or configure Twilio credentials')
+                return false
+            }
+
+            let twilioModule;
+            try {
+                twilioModule = (await import('twilio')).default
+            } catch (e) {
+                console.error('Twilio module not installed.', e)
+                throw new Error('Twilio module is not installed. Run npm install twilio')
+            }
+
+            const client = twilioModule(accountSid, authToken)
+            await client.messages.create({
+                body: smsMessage,
+                from: fromNumber,
+                to: phone
+            })
+
+            console.log(`✅ Twilio SMS sent to ${phone}`)
+            return true
+        }
+
+        if (provider === 'nexmo' || provider === 'vonage') {
+            let Vonage; 
+            try {
+                Vonage = (await import('@vonage/server-sdk')).default
+            } catch (e) {
+                console.error('Vonage module not installed.', e)
+                throw new Error('Vonage module is not installed. Run npm install @vonage/server-sdk')
+            }
+
+            if (!process.env.NEXMO_API_KEY || !process.env.NEXMO_API_SECRET || !process.env.NEXMO_FROM_NUMBER) {
+                console.log('⚠️ Nexmo credentials missing in .env');
+                console.log('SMS skipped: Set SMS_PROVIDER=log for demo mode or configure Nexmo credentials')
+                return false
+            }
+
+            const vonage = new Vonage({
+                apiKey: process.env.NEXMO_API_KEY,
+                apiSecret: process.env.NEXMO_API_SECRET
+            })
+
+            await new Promise((resolve, reject) => {
+                vonage.sms.send({
+                    to: phone,
+                    from: process.env.NEXMO_FROM_NUMBER,
+                    text: smsMessage
+                }, (err, responseData) => {
+                    if (err) reject(err)
+                    else if (responseData.messages[0].status !== '0') reject(new Error(responseData.messages[0]['error-text']))
+                    else resolve(responseData)
+                })
+            })
+
+            console.log(`✅ Nexmo SMS sent to ${phone}`)
+            return true
+        }
+
+        console.log(`⚠️ Unknown SMS provider: ${provider}. Defaulting to log mode.`)
+        console.log(`📱 To: ${phone}`)
+        console.log(`📝 Message: ${smsMessage}`)
+        return true
+    } catch (error) {
+        console.log('❌ SMS sending failed:', error.message)
+        return false
     }
 }
 
@@ -348,6 +512,7 @@ const placeOrder = async (req, res) => {
         await newOrder.save()
         await userModel.findByIdAndUpdate(userId, { cartData: {} })
         await sendOrderConfirmationEmail(newOrder, address)
+        await sendSMSReceipt(newOrder, address.phone)
 
         res.json({ success: true, message: "Order Placed" })
     } catch (error) {
@@ -382,6 +547,7 @@ const placeOrderStripe = async (req, res) => {
         const newOrder = new orderModel(orderData)
         await newOrder.save()
         await sendOrderConfirmationEmail(newOrder, address)
+        await sendSMSReceipt(newOrder, address.phone)
 
         const line_items = items.map((item) => ({
             price_data: {
@@ -488,7 +654,7 @@ const updateStatus = async (req, res) => {
 // Accept or Reject order
 const acceptOrder = async (req, res) => {
     try {
-        const { orderId, accepted, rejectedReason } = req.body;
+        const { orderId, accepted, rejectedReason, notify } = req.body;
 
         let updateData = { accepted }
         if (accepted === 'rejected' && rejectedReason) {
@@ -502,9 +668,15 @@ const acceptOrder = async (req, res) => {
 
         const updatedOrder = await orderModel.findByIdAndUpdate(orderId, updateData, { new: true })
 
-        // Send accepted email
+        // Send accepted notification by admin choice
         if (accepted === 'accepted' && updatedOrder) {
-            await sendOrderAcceptedEmail(updatedOrder)
+            if (notify === 'email') {
+                await sendOrderAcceptedEmail(updatedOrder)
+            } else if (notify === 'phone') {
+                if (updatedOrder.address?.phone) {
+                    await sendSMSReceipt(updatedOrder, updatedOrder.address.phone, `Your order ${updatedOrder.invoiceNumber} is confirmed. Total ৳${updatedOrder.amount}. Review: ${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${updatedOrder._id}`)
+                }
+            }
         }
 
         res.json({ success: true, message: `Order ${accepted}` })
@@ -530,6 +702,30 @@ const markAsPaid = async (req, res) => {
     }
 }
 
+// Send invoice via email / SMS
+const sendInvoice = async (req, res) => {
+    try {
+        const { orderId, method } = req.body;
+        if (!orderId) return res.json({ success: false, message: 'orderId is required' })
+
+        const order = await orderModel.findById(orderId)
+        if (!order) return res.json({ success: false, message: 'Order not found' })
+
+        if (method === 'sms') {
+            if (!order.address?.phone) return res.json({ success: false, message: 'Phone number not found' })
+            await sendSMSReceipt(order, order.address.phone, `Your bill voucher is ready (order ${order.invoiceNumber}). Review: ${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}`)
+        } else {
+            // default to email invoice/bill voucher
+            await sendInvoiceEmail(order)
+        }
+
+        return res.json({ success: true, message: 'Invoice sent successfully' })
+    } catch (error) {
+        console.error(error)
+        return res.json({ success: false, message: error.message })
+    }
+}
+
 // Get pending orders
 const getPendingOrders = async (req, res) => {
     try {
@@ -543,5 +739,5 @@ const getPendingOrders = async (req, res) => {
 
 export {
     verifyStripe, allOrders, placeOrder, placeOrderStripe,
-    updateStatus, userOrders, acceptOrder, markAsPaid, getPendingOrders
+    updateStatus, userOrders, acceptOrder, markAsPaid, getPendingOrders, sendInvoice
 }

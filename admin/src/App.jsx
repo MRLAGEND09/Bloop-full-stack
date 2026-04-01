@@ -5,8 +5,11 @@ import { Routes, Route } from 'react-router-dom'
 import Add from './pages/Add'
 import List from './pages/List'
 import Orders from './pages/Orders'
+import OrderDetail from './pages/OrderDetail'
+import OrderOverview from './pages/OrderOverview'
 import Dashboard from './pages/Dashboard'
 import Subscribers from './pages/Subscribers'
+import Reviews from './pages/Reviews'
 import Login from './components/Login'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -83,12 +86,15 @@ const App = () => {
               <Routes>
                 <Route path='/abandoned-carts' element={<AbandonedCarts token={token} />} />
                 <Route path='/sales-report' element={<SalesReport token={token} />} />
+                <Route path='/order-overview' element={<OrderOverview token={token} />} />
                 <Route path='/' element={<Dashboard token={token} />} />
                 <Route path='/dashboard' element={<Dashboard token={token} />} />
                 <Route path='/add' element={<Add token={token} />} />
                 <Route path='/list' element={<List token={token} />} />
                 <Route path='/orders' element={<Orders token={token} setNewOrderCount={setNewOrderCount} />} />
+                <Route path='/order/:orderId' element={<OrderDetail token={token} />} />
                 <Route path='/subscribers' element={<Subscribers token={token} />} />
+                <Route path='/reviews' element={<Reviews token={token} />} />
                 <Route path='/pending-orders' element={<PendingOrders token={token} setNewPendingCount={setNewPendingCount} />} />
               </Routes>
             </div>

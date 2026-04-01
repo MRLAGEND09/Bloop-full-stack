@@ -9,6 +9,8 @@ import cartRouter from './routes/cartRoute.js'
 import orderRouter from './routes/orderRoute.js'
 import subscriberRouter from './routes/subscriberRoute.js'
 import abandonedRouter from './routes/abandonedCartRoute.js'
+import reviewRouter from './routes/reviewRoute.js'
+import wishlistRouter from './routes/wishlistRoute.js'
 
 // App config 
 const app = express()
@@ -28,6 +30,8 @@ app.use('/api/product',productRouter)
 app.use('/api/cart',cartRouter)
 app.use('/api/order',orderRouter)
 app.use('/api/abandoned', abandonedRouter)
+app.use('/api/review', reviewRouter)
+app.use('/api/wishlist', wishlistRouter)
 
 
 

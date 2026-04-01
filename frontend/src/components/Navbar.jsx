@@ -80,6 +80,7 @@ const Navbar = () => {
                 )}
                 <p onClick={() => navigate('/profile')} className='cursor-pointer hover:text-black'>My Profile</p>
                 <p onClick={() => navigate('/order')} className='cursor-pointer hover:text-black'>Orders</p>
+                <p onClick={() => navigate('/wishlist')} className='cursor-pointer hover:text-black'>Wishlist</p>
                 <p onClick={logout} className='cursor-pointer hover:text-black text-red-400'>Logout</p>
               </div>
             </div>

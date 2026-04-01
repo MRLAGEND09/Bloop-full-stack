@@ -2,11 +2,14 @@ import React, { useContext, useEffect, useState } from 'react'
 import Title from '../components/Title'
 import axios from 'axios'
 import { ShopContext } from '../context/ShopContext'
+import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 
 const Order = () => {
 
   const { backendUrl, token, currency } = useContext(ShopContext)
   const [orderData, setOrderData] = useState([])
+  const navigate = useNavigate()
 
   const loadOrderData = async () => {
     try {
@@ -61,7 +64,7 @@ const Order = () => {
                   <p className='mt-1 font-medium'>Total Amount: <span className='text-black'>{currency}{item.amount}</span></p>
                 </div>
               </div>
-              <div className='flex justify-end w-full'>
+              <div className='flex justify-end w-full flex-col sm:flex-row sm:items-center gap-2'>
                 <div className='flex items-center gap-2'>
                   <p className={`min-w-2 h-2 rounded-full ${
                     item.status === 'Delivered' ? 'bg-green-500' :

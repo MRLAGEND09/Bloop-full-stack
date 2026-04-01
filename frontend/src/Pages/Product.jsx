@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom';
 import { assets } from '../assets/assets';
 import RelatedProducts from '../components/RelatedProducts';
+import ReviewSection from '../components/ReviewSection';
 import { ShopContext } from '../context/ShopContext';
 
 const Product = () => {
@@ -56,12 +57,15 @@ const Product = () => {
         <div className='flex-1'>
           <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>
           <div className='flex items-center gap-1 mt-2'>
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_dull_icon} alt="" className="w-3 5" />
-            <p className='pl-2'>122</p>
+            {Array.from({ length: 5 }, (_, i) => (
+              <img
+                key={i}
+                src={i < Math.floor(productData.rating || 0) ? assets.star_icon : assets.star_dull_icon}
+                alt=""
+                className="w-3.5"
+              />
+            ))}
+            <p className='pl-2'>({productData.reviewCount || 0})</p>
           </div>
 
           {/* Price with discount */}
@@ -97,16 +101,7 @@ const Product = () => {
       </div>
 
       {/* ------- Description & Review Section ------ */}
-      <div className='mt-20'>
-        <div className='flex'>
-          <b className='border px-5 py-3 text-sm'>Description</b>
-          <p className='border px-5 py-3 text-sm'>Reviews {122}</p>
-        </div>
-        <div className='flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500'>
-          <p>An e-commerce website is an online platform that facilitates the buying and selling of products or services over the internet.</p>
-          <p>E-commerce websites typically display products or services along with detailed descriptions, images, prices, and any available variations.</p>
-        </div>
-      </div>
+      <ReviewSection productId={productData._id} />
 
       {/* ------ Display Related Products ------ */}
       <RelatedProducts category={productData.category} subCategory={productData.subCategory} />

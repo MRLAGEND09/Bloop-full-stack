@@ -46,20 +46,35 @@ const Sidebar = ({ newOrderCount, setNewOrderCount, newPendingCount }) => {
           )}
         </NavLink>
 
+        <NavLink
+          className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l"
+          to="/order-overview"
+        >
+          <img className='w-5 h-5' src={assets.order_icon} alt="" />
+          <p className="hidden md:block">Order Overview</p>
+        </NavLink>
+
         <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/subscribers'>
           <i className='fas fa-envelope text-gray-600'></i>
           <p className='hidden md:block'>Subscribers</p>
+        </NavLink>
+
+        <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/reviews'>
+          <i className='fas fa-comments text-blue-600'></i>
+          <p className='hidden md:block'>Reviews</p>
         </NavLink>
 
         <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/sales-report'>
           <i className='fas fa-chart-bar text-gray-600'></i>
           <p className='hidden md:block'>Sales Report</p>
         </NavLink>
-        
+
         <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/abandoned-carts'>
           <i className='fas fa-shopping-cart text-yellow-500'></i>
           <p className='hidden md:block'>Abandoned Carts</p>
         </NavLink>
+
+
 
       </div>
     </div>

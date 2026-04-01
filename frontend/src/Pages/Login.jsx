@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { ShopContext } from '../context/ShopContext';
 import { auth, googleProvider, facebookProvider } from '../firebase';
 import { signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { useLocation } from 'react-router-dom'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 
 const Login = () => {
@@ -13,6 +14,8 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  const location = useLocation();
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -90,9 +93,10 @@ const Login = () => {
 
   useEffect(() => {
     if (token) {
-      navigate('/')
+      const destination = location?.state?.from?.pathname || '/'
+      navigate(destination, { replace: true })
     }
-  }, [token])
+  }, [token, location, navigate])
 
   return (
     <div className='flex flex-col items-center w-[90%] sm:max-w-96 m-auto mt-14 gap-4 text-gray-800'>

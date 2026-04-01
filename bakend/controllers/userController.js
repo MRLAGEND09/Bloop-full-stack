@@ -163,7 +163,7 @@ const uploadAvatar = async (req, res) => {
         }
         const result = await cloudinary.uploader.upload(avatarBase64, {
             resource_type: 'image',
-            folder: 'forever/avatars'
+            folder: 'bloop/avatars'
         })
         await userModel.findByIdAndUpdate(userId, { avatar: result.secure_url })
         res.json({ success: true, avatar: result.secure_url })

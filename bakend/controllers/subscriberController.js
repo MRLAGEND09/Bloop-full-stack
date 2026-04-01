@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer'
 // Random coupon code generate
 const generateCoupon = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let code = 'FOREVER-'
+    let code = 'BLOOP-'
     for (let i = 0; i < 6; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length))
     }
@@ -22,12 +22,12 @@ const sendEmail = async (email, couponCode, expiresAt) => {
     })
 
     await transporter.sendMail({
-        from: `"Forever Fashion" <${process.env.EMAIL_USER}>`,
+        from: `"BLOOP" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: '🎉 Your 20% Off Coupon - Forever Fashion',
+        subject: '🎉 Your 20% Off Coupon - BLOOP',
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #333;">Welcome to Forever Fashion! 🎉</h1>
+                <h1 style="color: #333;">Welcome to BLOOP! 🎉</h1>
                 <p>Thank you for subscribing!</p>
                 <p>You will receive a <strong>20% discount</strong> on your 2nd order.</p>
                 <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
@@ -37,7 +37,7 @@ const sendEmail = async (email, couponCode, expiresAt) => {
                 <p style="color: red;">⚠️ This coupon can only be used <strong>once</strong>.</p>
                 <p style="color: red;">⚠️ Valid until: <strong>${new Date(expiresAt).toDateString()}</strong></p>
                 <p>Happy Shopping! 🛍️</p>
-                <p><strong>Forever Fashion Team</strong></p>
+                <p><strong>BLOOP Team</strong></p>
             </div>
         `
     })

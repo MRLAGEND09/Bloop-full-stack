@@ -16,6 +16,8 @@ const ShopContextProvider = (props) => {
     const [token, setToken] = useState('');
     const [cartItems, setCartItems] = useState({});
     const [userInfo, setUserInfo] = useState(null);
+    const [wishlist, setWishlist] = useState([]);
+    const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
     const navigate = useNavigate();
 
@@ -147,21 +149,75 @@ const ShopContextProvider = (props) => {
         }
     }
 
+    // ----- Wishlist functions -----
+    const addToWishlist = async (productId) => {
+        if (!token) {
+            toast.error('Please login to add to wishlist')
+            return
+        }
+
+        try {
+            const response = await axios.post(backendUrl + '/api/wishlist/add', { productId }, { headers: { token } })
+            if (response.data.success) {
+                toast.success('Added to wishlist! ❤️')
+                getUserWishlist()
+            } else {
+                toast.error(response.data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }
+
+    const removeFromWishlist = async (productId) => {
+        try {
+            const response = await axios.post(backendUrl + '/api/wishlist/remove', { productId }, { headers: { token } })
+            if (response.data.success) {
+                toast.success('Removed from wishlist')
+                getUserWishlist()
+            } else {
+                toast.error(response.data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }
+
+    const getUserWishlist = async () => {
+        if (!token) return
+        try {
+            const response = await axios.post(backendUrl + '/api/wishlist/get', {}, { headers: { token } })
+            if (response.data.success) {
+                setWishlist(response.data.wishlist)
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const isInWishlist = (productId) => {
+        return wishlist.some(item => item.productId._id === productId)
+    }
+
     useEffect(() => {
         getProductsData()
     }, [])
 
     useEffect(() => {
-        if (!token && localStorage.getItem('token')) {
-            setToken(localStorage.getItem('token'))
-            getUserCart(localStorage.getItem('token'))
-            getUserInfo(localStorage.getItem('token'))
+        const existingToken = localStorage.getItem('token')
+        if (existingToken) {
+            setToken(existingToken)
+            getUserCart(existingToken)
+            getUserInfo(existingToken)
+            getUserWishlist()
         }
+        setIsAuthLoaded(true)
     }, [])
 
     useEffect(() => {
         if (token) {
             getUserInfo(token)
+            getUserWishlist()
         }
     }, [token])
 
@@ -173,7 +229,9 @@ const ShopContextProvider = (props) => {
         getCartAmount, getProductPrice,
         navigate, backendUrl,
         setToken, token,
-        userInfo, setUserInfo
+        userInfo, setUserInfo,
+        wishlist, addToWishlist, removeFromWishlist, isInWishlist,
+        isAuthLoaded
     }
 
     return (
