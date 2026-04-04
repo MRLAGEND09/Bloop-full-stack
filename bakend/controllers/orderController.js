@@ -2,6 +2,7 @@ import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import Stripe from 'stripe'
 import nodemailer from 'nodemailer'
+import PDFDocument from 'pdfkit'
 
 const currency = '৳'
 const deliveryCharge = 70
@@ -113,33 +114,18 @@ const sendOrderConfirmationEmail = async (order, address) => {
                     </div>
                     <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
                     <p style="color: #666; font-size: 14px;">Thank you for your order! We have received it and it is awaiting confirmation.</p>
-
                     <div class="steps">
                         <div class="step"><div class="step-circle step-done">✓</div><p>Placed</p></div>
                         <div class="step"><div class="step-circle step-pending">2</div><p>Confirmed</p></div>
                         <div class="step"><div class="step-circle step-pending">3</div><p>Shipped</p></div>
                         <div class="step"><div class="step-circle step-pending">4</div><p>Delivered</p></div>
                     </div>
-
                     <div class="info-grid">
-                        <div class="info-box">
-                            <h4>Order Date</h4>
-                            <p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Payment Method</h4>
-                            <p>${order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Delivery Address</h4>
-                            <p>${address.street}, ${address.city}, ${address.country}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Phone</h4>
-                            <p>${address.phone}</p>
-                        </div>
+                        <div class="info-box"><h4>Order Date</h4><p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                        <div class="info-box"><h4>Payment Method</h4><p>${order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}</p></div>
+                        <div class="info-box"><h4>Delivery Address</h4><p>${address.street}, ${address.city}, ${address.country}</p></div>
+                        <div class="info-box"><h4>Phone</h4><p>${address.phone}</p></div>
                     </div>
-
                     <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
                     <table>
                         <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
@@ -150,8 +136,6 @@ const sendOrderConfirmationEmail = async (order, address) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
-                    <p>Order link: <a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}" target="_blank">${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}</a></p>
-                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
                     <p>Support Phone: ${process.env.SUPPORT_PHONE || '+8801700000000'}</p>
                 </div>
             </div>
@@ -191,33 +175,18 @@ const sendOrderAcceptedEmail = async (order) => {
                     </div>
                     <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
                     <p style="color: #666; font-size: 14px;">Great news! Your order has been confirmed and is being prepared for shipment.</p>
-
                     <div class="steps">
                         <div class="step"><div class="step-circle step-done">✓</div><p>Placed</p></div>
                         <div class="step"><div class="step-circle step-done">✓</div><p>Confirmed</p></div>
                         <div class="step"><div class="step-circle step-pending">3</div><p>Shipped</p></div>
                         <div class="step"><div class="step-circle step-pending">4</div><p>Delivered</p></div>
                     </div>
-
                     <div class="info-grid">
-                        <div class="info-box">
-                            <h4>Order Date</h4>
-                            <p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Payment Method</h4>
-                            <p>${order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Delivery Address</h4>
-                            <p>${address.street}, ${address.city}, ${address.country}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Phone</h4>
-                            <p>${address.phone}</p>
-                        </div>
+                        <div class="info-box"><h4>Order Date</h4><p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                        <div class="info-box"><h4>Payment Method</h4><p>${order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}</p></div>
+                        <div class="info-box"><h4>Delivery Address</h4><p>${address.street}, ${address.city}, ${address.country}</p></div>
+                        <div class="info-box"><h4>Phone</h4><p>${address.phone}</p></div>
                     </div>
-
                     <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
                     <table>
                         <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
@@ -228,7 +197,6 @@ const sendOrderAcceptedEmail = async (order) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
-                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
                 </div>
             </div>
         </body>
@@ -266,24 +234,20 @@ const sendInvoiceEmail = async (order) => {
                         <p style="color: #ef6c00; margin: 0; font-size: 16px; font-weight: bold;">🧾 Bill Voucher Ready!</p>
                     </div>
                     <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
-                    <p style="color: #666; font-size: 14px;">Your payment has been confirmed and your bill voucher is attached. Please find details below.</p>
-
+                    <p style="color: #666; font-size: 14px;">Your payment has been confirmed. Please find your bill voucher details below.</p>
                     <div class="info-grid">
                         <div class="info-box"><h4>Order Date</h4><p>${new Date(order.date).toLocaleDateString()}</p></div>
                         <div class="info-box"><h4>Payment Method</h4><p>${order.paymentMethod}</p></div>
                         <div class="info-box"><h4>Total</h4><p>${currency}${order.amount}</p></div>
+                        <div class="info-box"><h4>Payment Status</h4><p>${order.payment ? '✅ Paid' : '⏳ Pending'}</p></div>
                     </div>
-
                     <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
                     <table>
                         <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
                         <tbody>${getItemsHTML(order.items)}</tbody>
                     </table>
                     ${getTotalHTML(order)}
-
-                    <p style="margin-top:25px;">Share your experience:<br /><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
                 </div>
-
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
@@ -326,40 +290,24 @@ const sendOrderDeliveredEmail = async (order) => {
                     </div>
                     <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
                     <p style="color: #666; font-size: 14px;">Your order has been successfully delivered. We hope you love your purchase!</p>
-
                     <div class="steps">
                         <div class="step"><div class="step-circle step-done">✓</div><p>Placed</p></div>
                         <div class="step"><div class="step-circle step-done">✓</div><p>Confirmed</p></div>
                         <div class="step"><div class="step-circle step-done">✓</div><p>Shipped</p></div>
                         <div class="step"><div class="step-circle step-done">✓</div><p>Delivered</p></div>
                     </div>
-
                     <div class="info-grid">
-                        <div class="info-box">
-                            <h4>Order Date</h4>
-                            <p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Delivered On</h4>
-                            <p>${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Delivery Address</h4>
-                            <p>${address.street}, ${address.city}, ${address.country}</p>
-                        </div>
-                        <div class="info-box">
-                            <h4>Payment</h4>
-                            <p>${order.payment ? '✅ Paid' : '⏳ ' + (order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Pending')}</p>
-                        </div>
+                        <div class="info-box"><h4>Order Date</h4><p>${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                        <div class="info-box"><h4>Delivered On</h4><p>${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                        <div class="info-box"><h4>Delivery Address</h4><p>${address.street}, ${address.city}, ${address.country}</p></div>
+                        <div class="info-box"><h4>Payment</h4><p>${order.payment ? '✅ Paid' : '⏳ ' + (order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Pending')}</p></div>
                     </div>
-
                     <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
                     <table>
                         <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
                         <tbody>${getItemsHTML(order.items)}</tbody>
                     </table>
                     ${getTotalHTML(order)}
-
                     <div style="background: #fff8e1; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; text-align: center; margin-top: 20px;">
                         <p style="margin: 0; color: #333; font-size: 14px;">⭐ Enjoying your purchase? We'd love to hear from you!</p>
                         <p style="margin: 5px 0 0; color: #666; font-size: 13px;">Visit our website to leave a review.</p>
@@ -368,8 +316,6 @@ const sendOrderDeliveredEmail = async (order) => {
                 <div class="footer">
                     <p>Thank you for shopping with BLOOP!</p>
                     <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
-                    <p>Order link: <a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}" target="_blank">${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/order/${order._id}</a></p>
-                    <p><a href="${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}">Leave a review</a></p>
                     <p>Support Phone: ${process.env.SUPPORT_PHONE || '+8801700000000'}</p>
                 </div>
             </div>
@@ -388,70 +334,73 @@ const sendOrderDeliveredEmail = async (order) => {
     }
 }
 
-// Send SMS receipt
+// Send SMS receipt via Twilio
 const sendSMSReceipt = async (order, phone, customText) => {
     try {
-        // Validate phone number
         if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
             console.log('SMS skipped: Phone number is empty or invalid')
             return false
         }
 
-        const baseMessage = `Order Confirmed! Order ID: ${order.invoiceNumber}. Total: ৳${order.amount}.`;
-        const reviewLink = ` Review: ${process.env.WEBSITE_URL || 'https://bloop.com'}/review/order/${order._id}`;
-        const smsMessage = customText || (baseMessage + reviewLink + ' Thank you for shopping with BLOOP!');
+        // Format Bangladesh phone number
+        let formattedPhone = phone.trim()
+        if (formattedPhone.startsWith('0')) {
+            formattedPhone = '+880' + formattedPhone.slice(1)
+        } else if (!formattedPhone.startsWith('+')) {
+            formattedPhone = '+880' + formattedPhone
+        }
 
-        const provider = (process.env.SMS_PROVIDER || 'log').toLowerCase();
+        const baseMessage = `BLOOP Order!\nInvoice: ${order.invoiceNumber}\nItems: ${order.items.map(i => i.name).join(', ')}\nTotal: ${currency}${order.amount}\nThank you for shopping with BLOOP!`
+        const smsMessage = customText || baseMessage
 
-        // Log-only mode (debug/demo)
+        const provider = (process.env.SMS_PROVIDER || 'log').toLowerCase()
+
         if (provider === 'log') {
-            console.log(`\n📱 [SMS LOG MODE] To: ${phone}`)
+            console.log(`\n📱 [SMS LOG MODE] To: ${formattedPhone}`)
             console.log(`📝 Message: ${smsMessage}\n`)
             return true
         }
 
         if (provider === 'twilio') {
-            const accountSid = process.env.TWILIO_ACCOUNT_SID;
-            const authToken = process.env.TWILIO_AUTH_TOKEN;
-            const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+            const accountSid = process.env.TWILIO_ACCOUNT_SID
+            const authToken = process.env.TWILIO_AUTH_TOKEN
+            const fromNumber = process.env.TWILIO_PHONE_NUMBER
 
             if (!accountSid || !authToken || !fromNumber) {
-                console.log('⚠️ Twilio credentials missing in .env');
-                console.log('SMS skipped: Set SMS_PROVIDER=log for demo mode or configure Twilio credentials')
+                console.log('⚠️ Twilio credentials missing in .env')
                 return false
             }
 
-            let twilioModule;
+            let twilioModule
             try {
                 twilioModule = (await import('twilio')).default
             } catch (e) {
-                console.error('Twilio module not installed.', e)
-                throw new Error('Twilio module is not installed. Run npm install twilio')
+                console.error('Twilio not installed. Run: npm install twilio')
+                return false
             }
 
             const client = twilioModule(accountSid, authToken)
-            await client.messages.create({
+            const result = await client.messages.create({
                 body: smsMessage,
                 from: fromNumber,
-                to: phone
+                to: formattedPhone
             })
 
-            console.log(`✅ Twilio SMS sent to ${phone}`)
+            console.log(`✅ Twilio SMS sent! SID: ${result.sid} To: ${formattedPhone}`)
             return true
         }
 
         if (provider === 'nexmo' || provider === 'vonage') {
-            let Vonage; 
+            let Vonage
             try {
                 Vonage = (await import('@vonage/server-sdk')).default
             } catch (e) {
-                console.error('Vonage module not installed.', e)
-                throw new Error('Vonage module is not installed. Run npm install @vonage/server-sdk')
+                console.error('Vonage not installed. Run: npm install @vonage/server-sdk')
+                return false
             }
 
             if (!process.env.NEXMO_API_KEY || !process.env.NEXMO_API_SECRET || !process.env.NEXMO_FROM_NUMBER) {
-                console.log('⚠️ Nexmo credentials missing in .env');
-                console.log('SMS skipped: Set SMS_PROVIDER=log for demo mode or configure Nexmo credentials')
+                console.log('⚠️ Nexmo credentials missing in .env')
                 return false
             }
 
@@ -462,7 +411,7 @@ const sendSMSReceipt = async (order, phone, customText) => {
 
             await new Promise((resolve, reject) => {
                 vonage.sms.send({
-                    to: phone,
+                    to: formattedPhone,
                     from: process.env.NEXMO_FROM_NUMBER,
                     text: smsMessage
                 }, (err, responseData) => {
@@ -472,16 +421,14 @@ const sendSMSReceipt = async (order, phone, customText) => {
                 })
             })
 
-            console.log(`✅ Nexmo SMS sent to ${phone}`)
+            console.log(`✅ Nexmo SMS sent to ${formattedPhone}`)
             return true
         }
 
-        console.log(`⚠️ Unknown SMS provider: ${provider}. Defaulting to log mode.`)
-        console.log(`📱 To: ${phone}`)
-        console.log(`📝 Message: ${smsMessage}`)
-        return true
+        console.log(`⚠️ Unknown SMS provider: ${provider}`)
+        return false
     } catch (error) {
-        console.log('❌ SMS sending failed:', error.message)
+        console.log('❌ SMS error:', error.message)
         return false
     }
 }
@@ -489,7 +436,7 @@ const sendSMSReceipt = async (order, phone, customText) => {
 // Placing order using COD Method
 const placeOrder = async (req, res) => {
     try {
-        const { userId, items, address, amount, couponDiscount, couponCode } = req.body;
+        const { userId, items, address, amount, couponDiscount, couponCode } = req.body
 
         const originalAmount = items.reduce((acc, item) => {
             return acc + (item.originalPrice || item.price) * item.quantity
@@ -516,7 +463,7 @@ const placeOrder = async (req, res) => {
 
         res.json({ success: true, message: "Order Placed" })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -524,8 +471,8 @@ const placeOrder = async (req, res) => {
 // Placing order using Stripe Method
 const placeOrderStripe = async (req, res) => {
     try {
-        const { userId, items, address, amount, couponDiscount, couponCode } = req.body;
-        const { origin } = req.headers;
+        const { userId, items, address, amount, couponDiscount, couponCode } = req.body
+        const { origin } = req.headers
 
         const originalAmount = items.reduce((acc, item) => {
             return acc + (item.originalPrice || item.price) * item.quantity
@@ -574,9 +521,9 @@ const placeOrderStripe = async (req, res) => {
             mode: 'payment'
         })
 
-        res.json({ success: true, session_url: session.url });
+        res.json({ success: true, session_url: session.url })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -586,15 +533,15 @@ const verifyStripe = async (req, res) => {
     const { orderId, success, userId } = req.body
     try {
         if (success === "true") {
-            await orderModel.findByIdAndUpdate(orderId, { payment: true });
+            await orderModel.findByIdAndUpdate(orderId, { payment: true })
             await userModel.findByIdAndUpdate(userId, { cartData: {} })
-            res.json({ success: true });
+            res.json({ success: true })
         } else {
             await orderModel.findByIdAndDelete(orderId)
             res.json({ success: false })
         }
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -603,12 +550,12 @@ const verifyStripe = async (req, res) => {
 const allOrders = async (req, res) => {
     try {
         const orders = await orderModel.find({})
-        res.json({ success: true, orders });
+        res.json({ success: true, orders })
     } catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
+        console.log(error)
+        res.json({ success: false, message: error.message })
     }
-};
+}
 
 // User order data for frontend
 const userOrders = async (req, res) => {
@@ -617,7 +564,7 @@ const userOrders = async (req, res) => {
         const orders = await orderModel.find({ userId })
         res.json({ success: true, orders })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -625,11 +572,11 @@ const userOrders = async (req, res) => {
 // Update order status from admin panel
 const updateStatus = async (req, res) => {
     try {
-        const { orderId, status, cancelReason } = req.body;
+        const { orderId, status, cancelReason } = req.body
 
-        let updateData = { status };
+        let updateData = { status }
         if (status === "Cancelled" && cancelReason) {
-            updateData.cancelReason = cancelReason;
+            updateData.cancelReason = cancelReason
         }
         if (status === "Delivered") {
             updateData.deliveredAt = new Date()
@@ -637,24 +584,23 @@ const updateStatus = async (req, res) => {
 
         const updatedOrder = await orderModel.findByIdAndUpdate(
             orderId, updateData, { new: true }
-        );
+        )
 
-        // Send delivered email
         if (status === 'Delivered' && updatedOrder) {
             await sendOrderDeliveredEmail(updatedOrder)
         }
 
-        res.json({ success: true, message: "Status Updated", order: updatedOrder });
+        res.json({ success: true, message: "Status Updated", order: updatedOrder })
     } catch (error) {
-        console.error(error);
-        res.json({ success: false, message: error.message });
+        console.error(error)
+        res.json({ success: false, message: error.message })
     }
-};
+}
 
 // Accept or Reject order
 const acceptOrder = async (req, res) => {
     try {
-        const { orderId, accepted, rejectedReason, notify } = req.body;
+        const { orderId, accepted, rejectedReason, notify } = req.body
 
         let updateData = { accepted }
         if (accepted === 'rejected' && rejectedReason) {
@@ -668,20 +614,23 @@ const acceptOrder = async (req, res) => {
 
         const updatedOrder = await orderModel.findByIdAndUpdate(orderId, updateData, { new: true })
 
-        // Send accepted notification by admin choice
         if (accepted === 'accepted' && updatedOrder) {
             if (notify === 'email') {
                 await sendOrderAcceptedEmail(updatedOrder)
             } else if (notify === 'phone') {
                 if (updatedOrder.address?.phone) {
-                    await sendSMSReceipt(updatedOrder, updatedOrder.address.phone, `Your order ${updatedOrder.invoiceNumber} is confirmed. Total ৳${updatedOrder.amount}. Review: ${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${updatedOrder._id}`)
+                    await sendSMSReceipt(
+                        updatedOrder,
+                        updatedOrder.address.phone,
+                        `BLOOP: Your order ${updatedOrder.invoiceNumber} is confirmed! Total: ${currency}${updatedOrder.amount}. Thank you for shopping with BLOOP!`
+                    )
                 }
             }
         }
 
         res.json({ success: true, message: `Order ${accepted}` })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -689,7 +638,7 @@ const acceptOrder = async (req, res) => {
 // Mark order as paid
 const markAsPaid = async (req, res) => {
     try {
-        const { orderId, paidBy } = req.body;
+        const { orderId, paidBy } = req.body
         await orderModel.findByIdAndUpdate(orderId, {
             payment: true,
             paidAt: new Date(),
@@ -697,15 +646,16 @@ const markAsPaid = async (req, res) => {
         }, { new: true })
         res.json({ success: true, message: 'Order marked as paid' })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
 
-// Send invoice via email / SMS
+// Send invoice via email (with PDF) or SMS
+
 const sendInvoice = async (req, res) => {
     try {
-        const { orderId, method } = req.body;
+        const { orderId, method } = req.body
         if (!orderId) return res.json({ success: false, message: 'orderId is required' })
 
         const order = await orderModel.findById(orderId)
@@ -713,10 +663,68 @@ const sendInvoice = async (req, res) => {
 
         if (method === 'sms') {
             if (!order.address?.phone) return res.json({ success: false, message: 'Phone number not found' })
-            await sendSMSReceipt(order, order.address.phone, `Your bill voucher is ready (order ${order.invoiceNumber}). Review: ${process.env.WEBSITE_URL || 'https://forever-full-stack.vercel.app'}/review/order/${order._id}`)
+            await sendSMSReceipt(
+                order,
+                order.address.phone,
+                `BLOOP Bill Voucher!\nInvoice: ${order.invoiceNumber}\nTotal: ৳${order.amount}\nPayment: ${order.payment ? 'Paid' : 'Pending'}\nThank you!`
+            )
         } else {
-            // default to email invoice/bill voucher
-            await sendInvoiceEmail(order)
+            // Generate PDF and send via email
+            const pdfBuffer = await generatePDFBuffer(order)
+            const address = order.address
+
+            const emailHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><style>${emailStyles}</style></head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>BLOOP</h1>
+                        <p style="color: #ccc; margin: 5px 0 0;">Fashion & Style</p>
+                    </div>
+                    <div class="body">
+                        <p style="color: #999; font-size: 13px;">Invoice: ${order.invoiceNumber}</p>
+                        <div class="badge" style="background: #fff3e0; border: 1px solid #ffb300;">
+                            <p style="color: #ef6c00; margin: 0; font-size: 16px; font-weight: bold;">🧾 Your Bill Voucher is Ready!</p>
+                        </div>
+                        <p style="color: #333; font-size: 15px;">Hi <strong>${address.firstName} ${address.lastName}</strong>,</p>
+                        <p style="color: #666; font-size: 14px;">Please find your bill voucher attached as PDF.</p>
+                        <div class="info-grid">
+                            <div class="info-box"><h4>Invoice</h4><p>${order.invoiceNumber}</p></div>
+                            <div class="info-box"><h4>Total</h4><p>৳${order.amount}</p></div>
+                            <div class="info-box"><h4>Payment</h4><p>${order.payment ? '✅ Paid' : '⏳ Pending'}</p></div>
+                            <div class="info-box"><h4>Method</h4><p>${order.paymentMethod}</p></div>
+                        </div>
+                        <h3 style="color: #333; margin-bottom: 10px;">Order Items</h3>
+                        <table>
+                            <thead><tr><th>Product</th><th style="text-align:center">Size</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
+                            <tbody>${getItemsHTML(order.items)}</tbody>
+                        </table>
+                        ${getTotalHTML(order)}
+                    </div>
+                    <div class="footer">
+                        <p>Thank you for shopping with BLOOP!</p>
+                        <p>Questions? Contact us at ${process.env.EMAIL_USER}</p>
+                    </div>
+                </div>
+            </body>
+            </html>`
+
+            await transporter.sendMail({
+                from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
+                to: address.email,
+                subject: `🧾 Bill Voucher - ${order.invoiceNumber}`,
+                html: emailHTML,
+                attachments: [
+                    {
+                        filename: `Invoice_${order.invoiceNumber}.pdf`,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf'
+                    }
+                ]
+            })
+            console.log('Bill voucher email with PDF sent to:', address.email)
         }
 
         return res.json({ success: true, message: 'Invoice sent successfully' })
@@ -732,12 +740,121 @@ const getPendingOrders = async (req, res) => {
         const orders = await orderModel.find({ accepted: 'pending' }).sort({ date: -1 })
         res.json({ success: true, orders })
     } catch (error) {
-        console.log(error);
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
 
+// Generate PDF buffer
+const generatePDFBuffer = (order) => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 })
+        const buffers = []
+
+        doc.on('data', chunk => buffers.push(chunk))
+        doc.on('end', () => resolve(Buffer.concat(buffers)))
+        doc.on('error', reject)
+
+        // Header
+        doc.rect(0, 0, 612, 80).fill('#000000')
+        doc.fillColor('#ffffff').fontSize(24).text('BLOOP', 50, 25, { align: 'center' })
+        doc.fontSize(10).text('Fashion & Style', 50, 52, { align: 'center' })
+
+        // Reset color
+        doc.fillColor('#000000')
+
+        // Invoice info
+        doc.fontSize(10)
+        doc.text(`Invoice: ${order.invoiceNumber}`, 50, 100)
+        doc.text(`Date: ${new Date(order.date).toLocaleDateString()}`, 50, 115)
+        doc.text(`Status: ${order.status}`, 50, 130)
+        doc.text(`Payment: ${order.payment ? 'Paid' : 'Pending'}`, 350, 100)
+        doc.text(`Method: ${order.paymentMethod}`, 350, 115)
+
+        // Divider
+        doc.moveTo(50, 150).lineTo(562, 150).stroke('#cccccc')
+
+        // Customer info
+        doc.fontSize(12).font('Helvetica-Bold').text('Customer Details', 50, 165)
+        doc.font('Helvetica').fontSize(10)
+        doc.text(`Name: ${order.address.firstName} ${order.address.lastName}`, 50, 182)
+        doc.text(`Address: ${order.address.street}, ${order.address.city}, ${order.address.country} - ${order.address.zipcode}`, 50, 197)
+        doc.text(`Phone: ${order.address.phone}`, 50, 212)
+        doc.text(`Email: ${order.address.email}`, 50, 227)
+
+        // Divider
+        doc.moveTo(50, 245).lineTo(562, 245).stroke('#cccccc')
+
+        // Table header
+        doc.fontSize(10).font('Helvetica-Bold')
+        doc.rect(50, 255, 512, 20).fill('#000000')
+        doc.fillColor('#ffffff')
+        doc.text('Product', 55, 260)
+        doc.text('Size', 280, 260)
+        doc.text('Qty', 340, 260)
+        doc.text('Price', 400, 260)
+        doc.text('Total', 470, 260)
+        doc.fillColor('#000000').font('Helvetica')
+
+        // Table rows
+        let y = 280
+        order.items.forEach((item, i) => {
+            if (i % 2 === 0) {
+                doc.rect(50, y - 3, 512, 18).fill('#f5f5f5')
+            }
+            doc.fillColor('#000000').fontSize(9)
+            doc.text(item.name.substring(0, 30), 55, y)
+            doc.text(item.size, 280, y)
+            doc.text(item.quantity.toString(), 340, y)
+            doc.text(`৳${item.price}`, 400, y)
+            doc.text(`৳${(item.price * item.quantity).toFixed(2)}`, 470, y)
+            y += 20
+        })
+
+        // Totals
+        y += 10
+        doc.moveTo(50, y).lineTo(562, y).stroke('#cccccc')
+        y += 10
+
+        doc.fontSize(10)
+        const subtotal = order.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        doc.text(`Subtotal: ৳${subtotal.toFixed(2)}`, 350, y)
+        y += 15
+        doc.text(`Delivery: ৳70`, 350, y)
+        y += 15
+
+        if (order.couponDiscount > 0) {
+            doc.fillColor('#00aa00').text(`Coupon: -৳${order.couponDiscount}`, 350, y)
+            doc.fillColor('#000000')
+            y += 15
+        }
+
+        if (order.productDiscount > 0) {
+            doc.fillColor('#00aa00').text(`Product Discount: -৳${order.productDiscount}`, 350, y)
+            doc.fillColor('#000000')
+            y += 15
+        }
+
+        doc.font('Helvetica-Bold').fontSize(12)
+        doc.text(`Total: ৳${order.amount}`, 350, y + 5)
+        doc.font('Helvetica')
+
+        // Footer
+        y += 40
+        doc.moveTo(50, y).lineTo(562, y).stroke('#cccccc')
+        doc.fontSize(9).fillColor('#999999')
+        doc.text('Thank you for shopping with BLOOP!', 50, y + 10, { align: 'center' })
+        doc.text(`Support: ${process.env.EMAIL_USER}`, 50, y + 22, { align: 'center' })
+
+        doc.end()
+    })
+}
+
+
+
+
 export {
     verifyStripe, allOrders, placeOrder, placeOrderStripe,
-    updateStatus, userOrders, acceptOrder, markAsPaid, getPendingOrders, sendInvoice
+    updateStatus, userOrders, acceptOrder, markAsPaid,
+    getPendingOrders, sendInvoice
 }
