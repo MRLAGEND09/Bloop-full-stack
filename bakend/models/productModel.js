@@ -8,12 +8,22 @@ const productSchema = new mongoose.Schema({
     category: { type: String, required: true },
     subCategory: { type: String, required: true },
     sizes: { type: Array, required: true },
-    bestseller: { type: Boolean },
+    bestseller: { type: Boolean, default: false },
     discount: { type: Number, default: 0 },
     discountActive: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
-    date: { type: Number, required: true }
+    date: { type: Number, required: true },
+
+    // Collection tags
+    collections: { 
+        type: [String], 
+        default: [],
+        enum: ['latest', 'polo', 'jacket', 'bloop', 'bestseller', '']
+    },
+
+    // Show in Collection page
+    showInCollection: { type: Boolean, default: false },
 })
 
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
