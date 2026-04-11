@@ -83,12 +83,36 @@ const registerUser = async (req, res) => {
 const adminLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET);
-            res.json({ success: true, token })
-        } else {
-            res.json({ success: false, message: "Invalid credentials" })
+
+        const adminAccounts = [
+            {
+                name: process.env.ADMIN1_NAME || 'Admin1',
+                email: process.env.ADMIN1_EMAIL,
+                password: process.env.ADMIN1_PASSWORD
+            },
+            {
+                name: process.env.ADMIN2_NAME || 'Admin2',
+                email: process.env.ADMIN2_EMAIL,
+                password: process.env.ADMIN2_PASSWORD
+            },
+            {
+                name: process.env.ADMIN3_NAME || 'Admin3',
+                email: process.env.ADMIN3_EMAIL,
+                password: process.env.ADMIN3_PASSWORD
+            }
+        ].filter((admin) => admin.email && admin.password)
+
+        const matchedAdmin = adminAccounts.find((admin) => admin.email === email && admin.password === password)
+
+        if (!matchedAdmin) {
+            return res.json({ success: false, message: "Invalid credentials" })
         }
+
+        const token = jwt.sign(
+            { role: 'admin', email: matchedAdmin.email, adminName: matchedAdmin.name },
+            process.env.JWT_SECRET
+        );
+        res.json({ success: true, token, adminName: matchedAdmin.name })
     } catch (error) {
         console.log(error);
         res.json({ success: false, message: error.message })

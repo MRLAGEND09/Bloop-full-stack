@@ -56,6 +56,12 @@ import p_img52 from './p_img52.png'
 
 
 import logo from './logo.png'
+import latest_logo from './Latest_logo.jpg'
+import jacket_logo from './jacket_logo.webp'
+import bestseller_logo from './Bestseller_logo.jpg'
+import boss_logo from './boss_logo.jpg'
+import lacoste_logo from './lacoste-logo.png'
+import ralph_lauren_logo from './Ralph_Lauren_logo.png'
 import hero_img from './hero_img.png'
 import cart_icon from './cart_icon.png'
 import bin_icon from './bin_icon.png'
@@ -76,6 +82,12 @@ import cross_icon from './cross_icon.png'
 
 export const assets = {
     logo,
+    latest_logo,
+    jacket_logo,
+    bestseller_logo,
+    boss_logo,
+    lacoste_logo,
+    ralph_lauren_logo,
     hero_img,
     cart_icon,
     dropdown_icon,

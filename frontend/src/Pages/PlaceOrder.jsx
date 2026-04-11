@@ -1,10 +1,25 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useState, useEffect, useRef } from 'react'
 import Title from '../components/Title'
 import CartTotal from '../components/CartTotal'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { ShopContext } from '../context/ShopContext'
+
+const COUNTRY_OPTIONS = [
+  { name: 'Bangladesh', code: 'bd' },
+  { name: 'India', code: 'in' },
+  { name: 'Pakistan', code: 'pk' },
+  { name: 'Nepal', code: 'np' },
+  { name: 'Bhutan', code: 'bt' },
+  { name: 'Sri Lanka', code: 'lk' },
+  { name: 'United Arab Emirates', code: 'ae' },
+  { name: 'Saudi Arabia', code: 'sa' },
+  { name: 'Malaysia', code: 'my' },
+  { name: 'Singapore', code: 'sg' },
+  { name: 'United Kingdom', code: 'gb' },
+  { name: 'United States', code: 'us' }
+]
 
 const PlaceOrder = () => {
   const [method, setMethod] = useState('cod');
@@ -24,6 +39,22 @@ const PlaceOrder = () => {
   const [discount, setDiscount] = useState(0)
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponLoading, setCouponLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const clientOrderIdRef = useRef('')
+
+  const getClientOrderId = () => {
+    if (!clientOrderIdRef.current) {
+      clientOrderIdRef.current = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `order_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    }
+
+    return clientOrderIdRef.current
+  }
+
+  const resetClientOrderId = () => {
+    clientOrderIdRef.current = ''
+  }
 
   // Save abandoned cart when user visits checkout page
   useEffect(() => {
@@ -61,6 +92,8 @@ const PlaceOrder = () => {
     setFormData(data => ({ ...data, [name]: value }))
   }
 
+  const selectedCountry = COUNTRY_OPTIONS.find((country) => country.name === formData.country)
+
   const applyCoupon = async () => {
     if (!couponCode) {
       toast.error('Please enter a coupon code!')
@@ -94,6 +127,10 @@ const PlaceOrder = () => {
 
   const onSubmitHandler = async (event) => {
     event.preventDefault()
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+
     try {
       let orderItems = []
       for (const items in cartItems) {
@@ -119,46 +156,48 @@ const PlaceOrder = () => {
         items: orderItems,
         amount: getFinalAmount(),
         couponDiscount: couponDiscountAmount,
-        couponCode: couponApplied ? couponCode : ''
+        couponCode: couponApplied ? couponCode : '',
+        clientOrderId: getClientOrderId()
       }
 
       switch (method) {
         case 'cod':
           const response = await axios.post(backendUrl + '/api/order/place', orderData, { headers: { token } })
           if (response.data.success) {
-            if (couponApplied) {
-              await axios.post(backendUrl + '/api/subscriber/use', { couponCode })
-            }
             // Clear abandoned cart after successful order
             await axios.post(backendUrl + '/api/abandoned/clear', {}, { headers: { token } })
             setCartItems({})
+            resetClientOrderId()
             navigate('/order')
           } else {
             toast.error(response.data.message)
+            resetClientOrderId()
           }
           break;
 
         case 'stripe':
           const responseStripe = await axios.post(backendUrl + '/api/order/stripe', orderData, { headers: { token } })
           if (responseStripe.data.success) {
-            if (couponApplied) {
-              await axios.post(backendUrl + '/api/subscriber/use', { couponCode })
-            }
             await axios.post(backendUrl + '/api/abandoned/clear', {}, { headers: { token } })
             const { session_url } = responseStripe.data
             window.location.replace(session_url)
           } else {
             toast.error(responseStripe.data.message)
+            resetClientOrderId()
           }
           break;
 
         default:
+          resetClientOrderId()
           break;
       }
 
     } catch (error) {
       console.log(error);
       toast.error(error.message)
+      resetClientOrderId()
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -181,7 +220,28 @@ const PlaceOrder = () => {
         </div>
         <div className='flex gap-3'>
           <input required onChange={onChangeHandler} name='zipcode' value={formData.zipcode} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Zipcode' />
-          <input required onChange={onChangeHandler} name='country' value={formData.country} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Country' />
+          <div className='relative w-full'>
+            <select
+              required
+              onChange={onChangeHandler}
+              name='country'
+              value={formData.country}
+              className='border border-gray-300 rounded py-1.5 pl-3.5 pr-14 w-full bg-white text-gray-700'
+            >
+              <option value=''>Select Country</option>
+              {COUNTRY_OPTIONS.map((country) => (
+                <option key={country.code} value={country.name}>{country.name}</option>
+              ))}
+            </select>
+            {selectedCountry && (
+              <img
+                src={`https://flagcdn.com/24x18/${selectedCountry.code}.png`}
+                alt={`${selectedCountry.name} flag`}
+                className='absolute right-8 top-1/2 -translate-y-1/2 h-[14px] w-[20px] object-cover rounded-sm border border-gray-200 pointer-events-none'
+                loading='lazy'
+              />
+            )}
+          </div>
         </div>
         <input required onChange={onChangeHandler} name='phone' value={formData.phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
       </div>
@@ -233,7 +293,9 @@ const PlaceOrder = () => {
             </div>
           </div>
           <div className='w-full text-end mt-8'>
-            <button type='submit' className='bg-black text-white px-16 py-3 text-sm'>PLACE ORDER</button>
+            <button disabled={isSubmitting} type='submit' className='bg-black text-white px-16 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed'>
+              {isSubmitting ? 'PLACING...' : 'PLACE ORDER'}
+            </button>
           </div>
         </div>
       </div>

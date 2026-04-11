@@ -3,13 +3,17 @@ import { assets } from '../assets/assets'
 import axios from 'axios';
 import { bakendUrl } from '../App';
 import { toast } from 'react-toastify';
+import { FaLeaf, FaCrown } from 'react-icons/fa'
+import { SiZara, SiDior, SiNike, SiHugo } from 'react-icons/si'
 
 const COLLECTIONS = [
-  { value: 'latest', label: '🆕 Latest Collection' },
-  { value: 'polo', label: '👕 Polo Collection' },
-  { value: 'jacket', label: '🧥 Jacket Collection' },
-  { value: 'bloop', label: '⭐ Bloop Collection' },
-  { value: 'bestseller', label: '🔥 Bestseller Collection' },
+  { value: 'latest', label: 'Latest Collection', logoSrc: assets.latest_logo, Icon: SiZara },
+  { value: 'jacket', label: 'Jacket Collection', logoSrc: assets.jacket_logo, Icon: SiDior },
+  { value: 'bloop', label: 'Bloop Collection', logoSrc: assets.logo },
+  { value: 'bestseller', label: 'Bestseller Collection', logoSrc: assets.bestseller_logo, Icon: SiNike },
+  { value: 'boss', label: 'Boss Collection', logoSrc: assets.boss_logo, Icon: SiHugo },
+  { value: 'lacoste', label: 'Lacoste Collection', logoSrc: assets.lacoste_logo, Icon: FaLeaf },
+  { value: 'ralph-lauren', label: 'Ralph Lauren Collection', logoSrc: assets.ralph_lauren_logo, Icon: FaCrown },
 ]
 
 const Add = ({ token }) => {
@@ -27,6 +31,7 @@ const Add = ({ token }) => {
   const [sizes, setSizes] = useState([]);
   const [selectedCollections, setSelectedCollections] = useState([]);
   const [showInCollection, setShowInCollection] = useState(false);
+  const [failedLogos, setFailedLogos] = useState({});
 
   const toggleCollection = (value) => {
     setSelectedCollections(prev =>
@@ -163,7 +168,21 @@ const Add = ({ token }) => {
                 : 'bg-white text-gray-600 border-gray-300 hover:border-black'
                 }`}
             >
-              {col.label}
+              <span className='inline-flex items-center gap-1.5'>
+                {col.logoSrc && !failedLogos[col.value] ? (
+                  <img
+                    src={col.logoSrc}
+                    alt={col.label}
+                    className='w-4 h-4 object-contain rounded-sm'
+                    onError={() => setFailedLogos(prev => ({ ...prev, [col.value]: true }))}
+                  />
+                ) : col.Icon ? (
+                  <col.Icon className='text-xs' />
+                ) : (
+                  <img src={assets.logo} alt='logo' className='w-4 h-4 object-contain rounded-sm' />
+                )}
+                {col.label}
+              </span>
             </div>
           ))}
         </div>
@@ -182,13 +201,7 @@ const Add = ({ token }) => {
           </div>
         )}
       </div>
-
-      <div className='flex gap-2 mt-2'>
-        <input onChange={() => setBestseller(prev => !prev)} checked={bestseller} type="checkbox" id='bestseller' />
-        <label className='cursor-pointer' htmlFor="bestseller">Add to bestseller</label>
-      </div>
-
-      <button type="submit" className='w-28 py-3 mt-4 bg-black text-white'>ADD</button>
+      <button type="submit" className='w-28 py- 3 mt-4 bg-black text-white'>ADD</button>
     </form>
   )
 }

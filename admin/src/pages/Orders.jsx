@@ -354,6 +354,9 @@ const Orders = ({ token, setNewOrderCount }) => {
 
       <div>
         {orders.map((order, index) => {
+          const latestAction = Array.isArray(order.actionHistory) && order.actionHistory.length > 0
+            ? order.actionHistory[order.actionHistory.length - 1]
+            : null
           const originalAmount = order.items.reduce((acc, item) => {
             return acc + (item.originalPrice || item.price) * item.quantity
           }, 0)
@@ -423,6 +426,12 @@ const Orders = ({ token, setNewOrderCount }) => {
                 </p>
                 {order.invoiceNumber && (
                   <p className='text-xs text-gray-400 mt-1'>#{order.invoiceNumber}</p>
+                )}
+                {order.lastActionBy && (
+                  <p className='text-xs text-purple-600 mt-1'>Last action by: {order.lastActionBy}</p>
+                )}
+                {latestAction?.at && (
+                  <p className='text-xs text-gray-400'>Updated: {new Date(latestAction.at).toLocaleString()}</p>
                 )}
               </div>
 

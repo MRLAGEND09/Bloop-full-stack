@@ -26,6 +26,7 @@ export const currency = '৳'
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '')
+  const [adminName, setAdminName] = useState(localStorage.getItem('adminName') ? localStorage.getItem('adminName') : '')
   const [newOrderCount, setNewOrderCount] = useState(0)
   const [newPendingCount, setNewPendingCount] = useState(0)
   const prevOrderCount = useRef(0)
@@ -34,6 +35,17 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('token', token)
   }, [token])
+
+  useEffect(() => {
+    localStorage.setItem('adminName', adminName)
+  }, [adminName])
+
+  const handleLogout = () => {
+    setToken('')
+    setAdminName('')
+    localStorage.removeItem('token')
+    localStorage.removeItem('adminName')
+  }
 
   useEffect(() => {
     if (!token) return
@@ -72,9 +84,9 @@ const App = () => {
     <div className='bg-gray-50 min-h-screen'>
       <ToastContainer />
       {token === ''
-        ? <Login setToken={setToken} />
+        ? <Login setToken={setToken} setAdminName={setAdminName} />
         : <>
-          <Navbar setToken={setToken} />
+          <Navbar onLogout={handleLogout} adminName={adminName} />
           <hr />
           <div className='flex w-full'>
             <Sidebar

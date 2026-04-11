@@ -19,7 +19,7 @@ const productSchema = new mongoose.Schema({
     collections: { 
         type: [String], 
         default: [],
-        enum: ['latest', 'polo', 'jacket', 'bloop', 'bestseller', '']
+        enum: ['latest', 'jacket', 'bloop', 'bestseller', 'boss', 'lacoste', 'ralph-lauren', '']
     },
 
     // Show in Collection page

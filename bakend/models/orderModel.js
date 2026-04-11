@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 
 const orderSchema = new mongoose.Schema({
     userId: { type: String, required: true },
+    clientOrderId: { type: String, default: '', index: true },
     items: { type: Array, required: true },
     amount: { type: Number, required: true },
     address: { type: Object, required: true },
@@ -23,6 +24,19 @@ const orderSchema = new mongoose.Schema({
     deliveredAt: { type: Date, default: null },
     // Bill Voucher
     invoiceNumber: { type: String, default: "" },
+    stripeSessionId: { type: String, default: '' },
+    stripeSessionUrl: { type: String, default: '' },
+    // Admin action attribution
+    lastActionBy: { type: String, default: '' },
+    actionHistory: {
+        type: [{
+            action: { type: String, default: '' },
+            adminName: { type: String, default: '' },
+            note: { type: String, default: '' },
+            at: { type: Date, default: Date.now }
+        }],
+        default: []
+    }
 })
 
 const orderModel = mongoose.models.order || mongoose.model('order', orderSchema)

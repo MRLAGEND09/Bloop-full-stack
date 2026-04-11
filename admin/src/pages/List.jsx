@@ -1,19 +1,24 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react'
 import { bakendUrl, currency } from '../App';
+import { assets } from '../assets/assets';
 import { toast } from 'react-toastify';
 import { FaTrash, FaTag, FaStore } from 'react-icons/fa'
+import { SiZara, SiDior, SiNike, SiHugo } from 'react-icons/si'
 
 const COLLECTIONS = [
-  { value: 'latest', label: 'Latest' },
-  { value: 'polo', label: 'Polo' },
-  { value: 'jacket', label: 'Jacket' },
-  { value: 'bloop', label: 'Bloop' },
-  { value: 'bestseller', label: 'Bestseller' },
+  { value: 'latest', label: 'Latest', logoSrc: assets.latest_logo, Icon: SiZara },
+  { value: 'jacket', label: 'Jacket', logoSrc: assets.jacket_logo, Icon: SiDior },
+  { value: 'bloop', label: 'Bloop', logoSrc: assets.logo, Icon: FaStore },
+  { value: 'bestseller', label: 'Bestseller', logoSrc: assets.bestseller_logo, Icon: SiNike },
+  { value: 'boss', label: 'Boss', logoSrc: assets.boss_logo, Icon: SiHugo },
+  { value: 'lacoste', label: 'Lacoste', logoSrc: assets.lacoste_logo, Icon: FaTag },
+  { value: 'ralph-lauren', label: 'Ralph Lauren', logoSrc: assets.ralph_lauren_logo, Icon: FaTag },
 ]
 
 const List = ({ token }) => {
   const [list, setList] = useState([]);
+  const [failedLogos, setFailedLogos] = useState({});
 
   const fetchList = async () => {
     try {
@@ -206,7 +211,19 @@ const List = ({ token }) => {
                     : 'bg-white text-gray-500 border-gray-300 hover:border-black'
                     }`}
                 >
-                  {col.label}
+                  <span className='inline-flex items-center gap-1'>
+                    {col.logoSrc && !failedLogos[col.value] ? (
+                      <img
+                        src={col.logoSrc}
+                        alt={col.label}
+                        className='w-3 h-3 object-contain rounded-sm'
+                        onError={() => setFailedLogos(prev => ({ ...prev, [col.value]: true }))}
+                      />
+                    ) : (
+                      <col.Icon className='text-[10px]' />
+                    )}
+                    {col.label}
+                  </span>
                 </div>
               ))}
             </div>

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import Titel from './Title'
+import Title from './Title'
 import ProductItem from './ProductItem'
 import { ShopContext } from '../context/ShopContext'
 
@@ -8,16 +8,24 @@ const BestSeller = () => {
   const [bestseller, setBestSeller] = useState([])
 
   useEffect(() => {
-    const bestproduct = products.filter(item => item.bestseller)
-    setBestSeller(bestproduct.slice(0, 5))
+    if (products.length > 0) {
+      // Bestseller collection tag দিয়ে filter করো, না থাকলে bestseller flag দিয়ে
+      const tagged = products.filter(p => p.collections && p.collections.includes('bestseller'))
+      if (tagged.length > 0) {
+        setBestSeller(tagged.slice(0, 5))
+      } else {
+        const byFlag = products.filter(item => item.bestseller)
+        setBestSeller(byFlag.slice(0, 5))
+      }
+    }
   }, [products])
 
   return (
     <div className='my-10'>
       <div className='text-center text-3xl py-8'>
-        <Titel text1={'BEST'} text2={'SELLER'} />
+        <Title text1={'BEST'} text2={'SELLER'} />
         <p className='w-3/4 m-auto text-xs sm:text-base text-gray-600'>
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the standard dummy text ever since the 1500s.
+          Our signature pieces — trusted by fashion-forward individuals.
         </p>
       </div>
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 gap-y-6'>

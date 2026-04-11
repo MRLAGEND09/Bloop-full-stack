@@ -1,13 +1,134 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
+import productModel from "../models/productModel.js";
+import subscriberModel from "../models/subscriberModel.js";
 import Stripe from 'stripe'
 import nodemailer from 'nodemailer'
 import PDFDocument from 'pdfkit'
 
 const currency = '৳'
 const deliveryCharge = 70
+const COUPON_PERCENT = 20
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+const findExistingOrderByClientOrderId = async (userId, clientOrderId, paymentMethod) => {
+    if (!clientOrderId) return null
+
+    return orderModel.findOne({
+        userId,
+        clientOrderId,
+        paymentMethod
+    })
+}
+
+const getDiscountedPrice = (product) => {
+    const price = Number(product.price) || 0
+    if (product.discountActive && Number(product.discount) > 0) {
+        const discounted = price - (price * Number(product.discount) / 100)
+        return parseFloat(discounted.toFixed(2))
+    }
+
+    return parseFloat(price.toFixed(2))
+}
+
+const normalizeOrderItems = async (items) => {
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('No items in order')
+    }
+
+    const normalizedInput = items.map((item) => ({
+        productId: String(item._id || item.productId || '').trim(),
+        size: String(item.size || '').trim(),
+        quantity: Number(item.quantity)
+    }))
+
+    for (const item of normalizedInput) {
+        if (!item.productId || !item.size || !Number.isInteger(item.quantity) || item.quantity <= 0 || item.quantity > 20) {
+            throw new Error('Invalid order items')
+        }
+    }
+
+    const uniqueIds = [...new Set(normalizedInput.map((item) => item.productId))]
+    const products = await productModel.find({ _id: { $in: uniqueIds } }).lean()
+
+    if (products.length !== uniqueIds.length) {
+        throw new Error('One or more products are invalid')
+    }
+
+    const productMap = new Map(products.map((product) => [String(product._id), product]))
+
+    const sanitizedItems = []
+    let subtotal = 0
+    let originalSubtotal = 0
+
+    for (const item of normalizedInput) {
+        const product = productMap.get(item.productId)
+        if (!product) throw new Error('Product not found')
+
+        const availableSizes = Array.isArray(product.sizes) ? product.sizes.map((size) => String(size)) : []
+        if (!availableSizes.includes(item.size)) {
+            throw new Error(`Selected size is unavailable for ${product.name}`)
+        }
+
+        const unitPrice = getDiscountedPrice(product)
+        const originalUnitPrice = parseFloat((Number(product.price) || 0).toFixed(2))
+
+        sanitizedItems.push({
+            _id: String(product._id),
+            name: product.name,
+            image: product.image,
+            size: item.size,
+            quantity: item.quantity,
+            price: unitPrice,
+            originalPrice: originalUnitPrice
+        })
+
+        subtotal += unitPrice * item.quantity
+        originalSubtotal += originalUnitPrice * item.quantity
+    }
+
+    subtotal = parseFloat(subtotal.toFixed(2))
+    originalSubtotal = parseFloat(originalSubtotal.toFixed(2))
+    const productDiscount = parseFloat((originalSubtotal - subtotal).toFixed(2))
+
+    return { sanitizedItems, subtotal, productDiscount }
+}
+
+const getCouponDiscountAmount = async (couponCode, amountBeforeCoupon) => {
+    const normalizedCouponCode = String(couponCode || '').trim().toUpperCase()
+    if (!normalizedCouponCode) {
+        return { normalizedCouponCode: '', couponDiscount: 0 }
+    }
+
+    const subscriber = await subscriberModel.findOne({ couponCode: normalizedCouponCode }).lean()
+    if (!subscriber) {
+        throw new Error('Invalid coupon code')
+    }
+    if (subscriber.isUsed) {
+        throw new Error('This coupon has already been used')
+    }
+    if (new Date() > new Date(subscriber.expiresAt)) {
+        throw new Error('Coupon expired')
+    }
+
+    const couponDiscount = parseFloat(((amountBeforeCoupon * COUPON_PERCENT) / 100).toFixed(2))
+    return { normalizedCouponCode, couponDiscount }
+}
+
+const markCouponUsed = async (couponCode) => {
+    if (!couponCode) return null
+
+    return subscriberModel.findOneAndUpdate(
+        {
+            couponCode,
+            isUsed: false,
+            expiresAt: { $gt: new Date() }
+        },
+        { isUsed: true },
+        { new: true }
+    )
+}
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -436,17 +557,43 @@ const sendSMSReceipt = async (order, phone, customText) => {
 // Placing order using COD Method
 const placeOrder = async (req, res) => {
     try {
-        const { userId, items, address, amount, couponDiscount, couponCode } = req.body
+        const { userId, items, address, amount, couponCode, clientOrderId } = req.body
 
-        const originalAmount = items.reduce((acc, item) => {
-            return acc + (item.originalPrice || item.price) * item.quantity
-        }, 0)
-        const productDiscount = parseFloat((originalAmount - amount + deliveryCharge + (couponDiscount || 0)).toFixed(2))
+        const existingOrder = await findExistingOrderByClientOrderId(userId, clientOrderId, 'COD')
+        if (existingOrder) {
+            return res.json({
+                success: true,
+                message: 'Order already placed',
+                orderId: existingOrder._id,
+                duplicate: true
+            })
+        }
+
+        if (!address || !address.firstName || !address.phone) {
+            return res.json({ success: false, message: 'Invalid address information' })
+        }
+
+        const { sanitizedItems, subtotal, productDiscount } = await normalizeOrderItems(items)
+        const amountBeforeCoupon = parseFloat((subtotal + deliveryCharge).toFixed(2))
+        const { normalizedCouponCode, couponDiscount } = await getCouponDiscountAmount(couponCode, amountBeforeCoupon)
+        const finalAmount = parseFloat((amountBeforeCoupon - couponDiscount).toFixed(2))
+
+        if (Number.isFinite(Number(amount)) && Math.abs(Number(amount) - finalAmount) > 0.5) {
+            return res.json({ success: false, message: 'Order amount mismatch detected' })
+        }
+
+        let claimedCoupon = null
+        if (normalizedCouponCode) {
+            claimedCoupon = await markCouponUsed(normalizedCouponCode)
+            if (!claimedCoupon) {
+                return res.json({ success: false, message: 'Coupon is no longer available' })
+            }
+        }
 
         const orderData = {
-            userId, items, address, amount,
-            couponDiscount: couponDiscount || 0,
-            couponCode: couponCode || '',
+            userId, clientOrderId: clientOrderId || '', items: sanitizedItems, address, amount: finalAmount,
+            couponDiscount,
+            couponCode: normalizedCouponCode,
             productDiscount: productDiscount > 0 ? productDiscount : 0,
             paymentMethod: "COD",
             payment: false,
@@ -455,13 +602,19 @@ const placeOrder = async (req, res) => {
             invoiceNumber: generateInvoice()
         }
 
-        const newOrder = new orderModel(orderData)
-        await newOrder.save()
-        await userModel.findByIdAndUpdate(userId, { cartData: {} })
-        await sendOrderConfirmationEmail(newOrder, address)
-        await sendSMSReceipt(newOrder, address.phone)
-
-        res.json({ success: true, message: "Order Placed" })
+        try {
+            const newOrder = new orderModel(orderData)
+            await newOrder.save()
+            await userModel.findByIdAndUpdate(userId, { cartData: {} })
+            await sendOrderConfirmationEmail(newOrder, address)
+            await sendSMSReceipt(newOrder, address.phone)
+            return res.json({ success: true, message: "Order Placed" })
+        } catch (saveError) {
+            if (claimedCoupon?._id) {
+                await subscriberModel.findByIdAndUpdate(claimedCoupon._id, { isUsed: false })
+            }
+            throw saveError
+        }
     } catch (error) {
         console.log(error)
         res.json({ success: false, message: error.message })
@@ -471,18 +624,36 @@ const placeOrder = async (req, res) => {
 // Placing order using Stripe Method
 const placeOrderStripe = async (req, res) => {
     try {
-        const { userId, items, address, amount, couponDiscount, couponCode } = req.body
+        const { userId, items, address, amount, couponCode, clientOrderId } = req.body
         const { origin } = req.headers
 
-        const originalAmount = items.reduce((acc, item) => {
-            return acc + (item.originalPrice || item.price) * item.quantity
-        }, 0)
-        const productDiscount = parseFloat((originalAmount - amount + deliveryCharge + (couponDiscount || 0)).toFixed(2))
+        const existingOrder = await findExistingOrderByClientOrderId(userId, clientOrderId, 'stripe')
+        if (existingOrder?.stripeSessionUrl) {
+            return res.json({
+                success: true,
+                session_url: existingOrder.stripeSessionUrl,
+                orderId: existingOrder._id,
+                duplicate: true
+            })
+        }
+
+        if (!address || !address.firstName || !address.phone) {
+            return res.json({ success: false, message: 'Invalid address information' })
+        }
+
+        const { sanitizedItems, subtotal, productDiscount } = await normalizeOrderItems(items)
+        const amountBeforeCoupon = parseFloat((subtotal + deliveryCharge).toFixed(2))
+        const { normalizedCouponCode, couponDiscount } = await getCouponDiscountAmount(couponCode, amountBeforeCoupon)
+        const finalAmount = parseFloat((amountBeforeCoupon - couponDiscount).toFixed(2))
+
+        if (Number.isFinite(Number(amount)) && Math.abs(Number(amount) - finalAmount) > 0.5) {
+            return res.json({ success: false, message: 'Order amount mismatch detected' })
+        }
 
         const orderData = {
-            userId, items, address, amount,
-            couponDiscount: couponDiscount || 0,
-            couponCode: couponCode || '',
+            userId, clientOrderId: clientOrderId || '', items: sanitizedItems, address, amount: finalAmount,
+            couponDiscount,
+            couponCode: normalizedCouponCode,
             productDiscount: productDiscount > 0 ? productDiscount : 0,
             paymentMethod: "stripe",
             payment: false,
@@ -493,10 +664,8 @@ const placeOrderStripe = async (req, res) => {
 
         const newOrder = new orderModel(orderData)
         await newOrder.save()
-        await sendOrderConfirmationEmail(newOrder, address)
-        await sendSMSReceipt(newOrder, address.phone)
 
-        const line_items = items.map((item) => ({
+        const line_items = sanitizedItems.map((item) => ({
             price_data: {
                 currency: currency,
                 product_data: { name: item.name },
@@ -521,6 +690,11 @@ const placeOrderStripe = async (req, res) => {
             mode: 'payment'
         })
 
+        await orderModel.findByIdAndUpdate(newOrder._id, {
+            stripeSessionId: session.id,
+            stripeSessionUrl: session.url
+        })
+
         res.json({ success: true, session_url: session.url })
     } catch (error) {
         console.log(error)
@@ -532,14 +706,60 @@ const placeOrderStripe = async (req, res) => {
 const verifyStripe = async (req, res) => {
     const { orderId, success, userId } = req.body
     try {
-        if (success === "true") {
-            await orderModel.findByIdAndUpdate(orderId, { payment: true })
-            await userModel.findByIdAndUpdate(userId, { cartData: {} })
-            res.json({ success: true })
-        } else {
-            await orderModel.findByIdAndDelete(orderId)
-            res.json({ success: false })
+        const order = await orderModel.findById(orderId)
+        if (!order) {
+            return res.json({ success: false, message: 'Order not found' })
         }
+
+        if (String(order.userId) !== String(userId)) {
+            return res.json({ success: false, message: 'Not authorized for this order' })
+        }
+
+        if (success !== "true") {
+            if (order.payment) {
+                return res.json({ success: true, duplicate: true })
+            }
+
+            await orderModel.findByIdAndDelete(orderId)
+            return res.json({ success: false })
+        }
+
+        if (!order.stripeSessionId) {
+            return res.json({ success: false, message: 'Missing Stripe session reference' })
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId)
+        if (session.payment_status !== 'paid') {
+            return res.json({ success: false, message: 'Payment not completed yet' })
+        }
+
+        const expectedAmount = Math.round(Number(order.amount) * 100)
+        if (typeof session.amount_total === 'number' && Math.abs(session.amount_total - expectedAmount) > 1) {
+            return res.json({ success: false, message: 'Payment amount mismatch' })
+        }
+
+        if (order.payment) {
+            return res.json({ success: true, duplicate: true })
+        }
+
+        const updatedOrder = await orderModel.findOneAndUpdate(
+            { _id: orderId, payment: false },
+            { payment: true, paidAt: new Date(), paidBy: 'stripe' },
+            { new: true }
+        )
+
+        if (!updatedOrder) {
+            return res.json({ success: true, duplicate: true })
+        }
+
+        if (updatedOrder.couponCode) {
+            await markCouponUsed(updatedOrder.couponCode)
+        }
+
+        await userModel.findByIdAndUpdate(updatedOrder.userId, { cartData: {} })
+        await sendOrderConfirmationEmail(updatedOrder, updatedOrder.address)
+        await sendSMSReceipt(updatedOrder, updatedOrder.address?.phone)
+        res.json({ success: true })
     } catch (error) {
         console.log(error)
         res.json({ success: false, message: error.message })
@@ -573,8 +793,9 @@ const userOrders = async (req, res) => {
 const updateStatus = async (req, res) => {
     try {
         const { orderId, status, cancelReason } = req.body
+        const adminName = req.adminName || 'Admin'
 
-        let updateData = { status }
+        let updateData = { status, lastActionBy: adminName }
         if (status === "Cancelled" && cancelReason) {
             updateData.cancelReason = cancelReason
         }
@@ -583,7 +804,19 @@ const updateStatus = async (req, res) => {
         }
 
         const updatedOrder = await orderModel.findByIdAndUpdate(
-            orderId, updateData, { new: true }
+            orderId,
+            {
+                ...updateData,
+                $push: {
+                    actionHistory: {
+                        action: `status:${status}`,
+                        adminName,
+                        note: cancelReason || '',
+                        at: new Date()
+                    }
+                }
+            },
+            { new: true }
         )
 
         if (status === 'Delivered' && updatedOrder) {
@@ -601,8 +834,9 @@ const updateStatus = async (req, res) => {
 const acceptOrder = async (req, res) => {
     try {
         const { orderId, accepted, rejectedReason, notify } = req.body
+        const adminName = req.adminName || 'Admin'
 
-        let updateData = { accepted }
+        let updateData = { accepted, lastActionBy: adminName }
         if (accepted === 'rejected' && rejectedReason) {
             updateData.rejectedReason = rejectedReason
             updateData.status = 'Cancelled'
@@ -612,7 +846,21 @@ const acceptOrder = async (req, res) => {
             updateData.status = 'Order Placed'
         }
 
-        const updatedOrder = await orderModel.findByIdAndUpdate(orderId, updateData, { new: true })
+        const updatedOrder = await orderModel.findByIdAndUpdate(
+            orderId,
+            {
+                ...updateData,
+                $push: {
+                    actionHistory: {
+                        action: `accept:${accepted}`,
+                        adminName,
+                        note: rejectedReason || '',
+                        at: new Date()
+                    }
+                }
+            },
+            { new: true }
+        )
 
         if (accepted === 'accepted' && updatedOrder) {
             if (notify === 'email') {
@@ -639,10 +887,20 @@ const acceptOrder = async (req, res) => {
 const markAsPaid = async (req, res) => {
     try {
         const { orderId, paidBy } = req.body
+        const adminName = req.adminName || 'Admin'
         await orderModel.findByIdAndUpdate(orderId, {
             payment: true,
             paidAt: new Date(),
-            paidBy: paidBy || 'Cash'
+            paidBy: paidBy || adminName,
+            lastActionBy: adminName,
+            $push: {
+                actionHistory: {
+                    action: 'payment:paid',
+                    adminName,
+                    note: '',
+                    at: new Date()
+                }
+            }
         }, { new: true })
         res.json({ success: true, message: 'Order marked as paid' })
     } catch (error) {
@@ -656,6 +914,7 @@ const markAsPaid = async (req, res) => {
 const sendInvoice = async (req, res) => {
     try {
         const { orderId, method } = req.body
+        const adminName = req.adminName || 'Admin'
         if (!orderId) return res.json({ success: false, message: 'orderId is required' })
 
         const order = await orderModel.findById(orderId)
@@ -726,6 +985,18 @@ const sendInvoice = async (req, res) => {
             })
             console.log('Bill voucher email with PDF sent to:', address.email)
         }
+
+        await orderModel.findByIdAndUpdate(orderId, {
+            lastActionBy: adminName,
+            $push: {
+                actionHistory: {
+                    action: `invoice:${method || 'email'}`,
+                    adminName,
+                    note: '',
+                    at: new Date()
+                }
+            }
+        })
 
         return res.json({ success: true, message: 'Invoice sent successfully' })
     } catch (error) {
