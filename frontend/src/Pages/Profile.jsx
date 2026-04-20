@@ -5,7 +5,7 @@ import { toast } from 'react-toastify'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 
 const Profile = () => {
-    const { token, backendUrl, userInfo, setUserInfo, navigate, currency, setToken, setCartItems } = useContext(ShopContext)
+    const { token, backendUrl, userInfo, setUserInfo, navigate, currency, clearPersistedCustomerState } = useContext(ShopContext)
     const [orders, setOrders] = useState([])
     const [activeTab, setActiveTab] = useState('profile')
     const [editing, setEditing] = useState(false)
@@ -21,8 +21,7 @@ const Profile = () => {
     })
 
     useEffect(() => {
-        const savedToken = token || localStorage.getItem('token')
-        if (!savedToken) {
+        if (!token) {
             navigate('/login')
             return
         }
@@ -145,10 +144,7 @@ const Profile = () => {
             }, { headers: { token } })
             if (res.data.success) {
                 toast.success('Account deleted successfully!')
-                localStorage.removeItem('token')
-                setToken('')
-                setCartItems({})
-                setUserInfo(null)
+                clearPersistedCustomerState()
                 navigate('/')
             } else {
                 toast.error(res.data.message)
