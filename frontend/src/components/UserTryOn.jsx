@@ -1,8 +1,34 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react'
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { ShopContext } from '../context/ShopContext'
 
 let segmentationRuntime = null
+
+const MAX_IMAGE_PX = 768
+
+const resizeImageFile = (file, maxPx = MAX_IMAGE_PX) => new Promise((resolve) => {
+  const img = new Image()
+  const url = URL.createObjectURL(file)
+  img.onload = () => {
+    URL.revokeObjectURL(url)
+    const { naturalWidth: w, naturalHeight: h } = img
+    if (w <= maxPx && h <= maxPx) {
+      resolve(file)
+      return
+    }
+    const ratio = Math.min(maxPx / w, maxPx / h)
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(w * ratio)
+    canvas.height = Math.round(h * ratio)
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob((blob) => {
+      resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+    }, 'image/jpeg', 0.88)
+  }
+  img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+  img.src = url
+})
 
 const loadImageElement = (src) => new Promise((resolve, reject) => {
   const img = new Image()
@@ -143,6 +169,9 @@ const UserTryOn = ({ productImage, productImages = [], productName = '', product
   const [showBasicOverlay, setShowBasicOverlay] = useState(false)
   const [isServerGenerated, setIsServerGenerated] = useState(false)
   const [rawUserPhoto, setRawUserPhoto] = useState('')
+  const tryOnCache = useRef({})
+  const lastClickRef = useRef(0)
+  const COOLDOWN_MS = 8000
 
   const validProductImages = useMemo(() => {
     const arr = Array.isArray(productImages) ? productImages.filter(Boolean) : []
@@ -176,8 +205,25 @@ const UserTryOn = ({ productImage, productImages = [], productName = '', product
     const file = event.target.files?.[0]
     if (!file) return
 
-    const objectUrl = URL.createObjectURL(file)
-    const fallbackDataUrl = await fileToDataUrl(file)
+    const now = Date.now()
+    if (now - lastClickRef.current < COOLDOWN_MS) {
+      setStatusText(`Please wait ${Math.ceil((COOLDOWN_MS - (now - lastClickRef.current)) / 1000)}s before trying again.`)
+      return
+    }
+    lastClickRef.current = now
+
+    const resizedFile = await resizeImageFile(file)
+    const cacheKey = `${resizedFile.name}-${resizedFile.size}-${displayProductImage || ''}`
+    if (tryOnCache.current[cacheKey]) {
+      setUserPhoto(tryOnCache.current[cacheKey])
+      setIsServerGenerated(true)
+      setIsProcessing(false)
+      setStatusText('Loaded from cache. AI try-on result reused.')
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(resizedFile)
+    const fallbackDataUrl = await fileToDataUrl(resizedFile)
     setRawUserPhoto(fallbackDataUrl)
     setIsProcessing(true)
     setShowBasicOverlay(false)
@@ -186,13 +232,13 @@ const UserTryOn = ({ productImage, productImages = [], productName = '', product
     try {
       if (backendUrl) {
         const formData = new FormData()
-        formData.append('userImage', file)
+        formData.append('userImage', resizedFile)
         if (displayProductImage) {
           formData.append('garmentImageUrl', displayProductImage)
         }
         formData.append('removeBg', 'true')
         formData.append('prompt', 'Generate realistic ecommerce virtual try-on output')
-        formData.append('garmentDescription', garmentDescription)
+        formData.append('garmentDescription', `You are an AI virtual try-on system. Replace the person's existing clothing with the new garment. Ensure the garment fits naturally according to the body shape and pose. Preserve the original face, hairstyle, body proportions, and identity. Maintain realistic lighting, shadows, and fabric texture. Garment: ${garmentDescription}`)
         formData.append('garmentCategory', garmentCategory)
 
         const response = await axios.post(`${backendUrl}/api/ai/virtual-tryon`, formData, {
@@ -201,6 +247,7 @@ const UserTryOn = ({ productImage, productImages = [], productName = '', product
         })
 
         if (response.data?.success && response.data?.finalImageUrl && ['huggingface', 'replicate'].includes(response.data?.provider)) {
+          tryOnCache.current[cacheKey] = response.data.finalImageUrl
           setUserPhoto(response.data.finalImageUrl)
           setIsServerGenerated(true)
           setOffsetX(0)
@@ -319,7 +366,7 @@ const UserTryOn = ({ productImage, productImages = [], productName = '', product
         <p className='font-medium'>Upload Photo Try-On</p>
         <label className='text-sm border px-3 py-1 cursor-pointer hover:bg-gray-50'>
           Upload Your Image
-          <input type='file' accept='image/*' hidden onChange={handleUpload} />
+          <input type='file' accept='image/*' hidden disabled={isProcessing} onChange={handleUpload} />
         </label>
       </div>
 
