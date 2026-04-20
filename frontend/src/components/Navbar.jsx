@@ -11,9 +11,8 @@ const Navbar = () => {
   navigate,
   token,
   setToken,
-  setCartItems,
   userInfo,
-  setUserInfo,
+    clearPersistedCustomerState,
   selectedCurrency,
   updateCurrency,
   selectedLanguage,
@@ -25,10 +24,7 @@ const Navbar = () => {
 
   const logout = () => {
     navigate('/login')
-    localStorage.removeItem('token')
-    setToken('')
-    setCartItems({})
-    setUserInfo(null)
+    clearPersistedCustomerState()
   }
 
   return (
