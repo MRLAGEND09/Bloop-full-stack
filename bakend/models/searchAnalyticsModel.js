@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
 const searchAnalyticsSchema = new mongoose.Schema({
-    term: { type: String, required: true, index: true, lowercase: true, trim: true },
+    term: { type: String, required: true, lowercase: true, trim: true },
     count: { type: Number, default: 1 },
     lastSearchedAt: { type: Date, default: Date.now },
     userId: { type: String, default: '' }
