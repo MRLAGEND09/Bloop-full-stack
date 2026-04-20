@@ -32,6 +32,21 @@ const userSchema = new mongoose.Schema(
         default: "manual"
     },
 
+    isVerified: {
+        type: Boolean,
+        default: true
+    },
+
+    verificationCode: {
+        type: String,
+        default: ''
+    },
+
+    verificationCodeExpiresAt: {
+        type: Date,
+        default: null
+    },
+
     address: {
         street: { type: String, default: '' },
         city: { type: String, default: '' },
