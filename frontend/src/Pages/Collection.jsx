@@ -5,21 +5,23 @@ import ProductItem from '../components/ProductItem'
 import { ShopContext } from '../context/ShopContext'
 import { toast } from 'react-toastify'
 import { useLocation } from 'react-router-dom'
+import { persistCollectionFilters, readPersistedCollectionFilters } from '../utils/persistedState'
 
 const Collection = () => {
+  const storedFilters = readPersistedCollectionFilters()
   const { products, search, showSearch, token, navigate, searchProductsAdvanced } = useContext(ShopContext)
-  const [showFilter, setShowFilter] = useState(false)
+  const [showFilter, setShowFilter] = useState(storedFilters.showFilter)
   const [filterproducts, setFilterProducts] = useState([])
-  const [category, setCategory] = useState([])
-  const [subCategory, setSubCategory] = useState([])
-  const [selectedCollection, setSelectedCollection] = useState('')
-  const [selectedBrands, setSelectedBrands] = useState([])
-  const [selectedSizes, setSelectedSizes] = useState([])
-  const [selectedColors, setSelectedColors] = useState([])
-  const [priceMin, setPriceMin] = useState('')
-  const [priceMax, setPriceMax] = useState('')
-  const [minRating, setMinRating] = useState('')
-  const [sortType, setSortType] = useState('relevant')
+  const [category, setCategory] = useState(storedFilters.category)
+  const [subCategory, setSubCategory] = useState(storedFilters.subCategory)
+  const [selectedCollection, setSelectedCollection] = useState(storedFilters.selectedCollection)
+  const [selectedBrands, setSelectedBrands] = useState(storedFilters.selectedBrands)
+  const [selectedSizes, setSelectedSizes] = useState(storedFilters.selectedSizes)
+  const [selectedColors, setSelectedColors] = useState(storedFilters.selectedColors)
+  const [priceMin, setPriceMin] = useState(storedFilters.priceMin)
+  const [priceMax, setPriceMax] = useState(storedFilters.priceMax)
+  const [minRating, setMinRating] = useState(storedFilters.minRating)
+  const [sortType, setSortType] = useState(storedFilters.sortType)
   const [failedLogos, setFailedLogos] = useState({})
   const location = useLocation()
 
@@ -118,6 +120,22 @@ const Collection = () => {
   ])
 
   useEffect(() => {
+    persistCollectionFilters({
+      showFilter,
+      category,
+      subCategory,
+      selectedCollection,
+      selectedBrands,
+      selectedSizes,
+      selectedColors,
+      priceMin,
+      priceMax,
+      minRating,
+      sortType
+    })
+  }, [showFilter, category, subCategory, selectedCollection, selectedBrands, selectedSizes, selectedColors, priceMin, priceMax, minRating, sortType])
+
+  useEffect(() => {
     if (!token) {
       const timer = setTimeout(() => {
         navigate('/login')
@@ -184,13 +202,13 @@ const Collection = () => {
           <p className='mb-3 text-sm font-medium'>CATEGORIES</p>
           <div className='flex flex-col gap-2 text-sm font-light text-gray-700'>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Men'} onChange={toggleCategory} /> Men
+              <input className='w-3' type="checkbox" value={'Men'} checked={category.includes('Men')} onChange={toggleCategory} /> Men
             </p>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Women'} onChange={toggleCategory} /> Women
+              <input className='w-3' type="checkbox" value={'Women'} checked={category.includes('Women')} onChange={toggleCategory} /> Women
             </p>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Kids'} onChange={toggleCategory} /> Kids
+              <input className='w-3' type="checkbox" value={'Kids'} checked={category.includes('Kids')} onChange={toggleCategory} /> Kids
             </p>
           </div>
         </div>
@@ -200,13 +218,13 @@ const Collection = () => {
           <p className='mb-3 text-sm font-medium'>TYPE</p>
           <div className='flex flex-col gap-2 text-sm font-light text-gray-700'>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Topwear'} onChange={toggleSubCategory} /> Topwear
+              <input className='w-3' type="checkbox" value={'Topwear'} checked={subCategory.includes('Topwear')} onChange={toggleSubCategory} /> Topwear
             </p>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Bottomwear'} onChange={toggleSubCategory} /> Bottomwear
+              <input className='w-3' type="checkbox" value={'Bottomwear'} checked={subCategory.includes('Bottomwear')} onChange={toggleSubCategory} /> Bottomwear
             </p>
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Winterwear'} onChange={toggleSubCategory} /> Winterwear
+              <input className='w-3' type="checkbox" value={'Winterwear'} checked={subCategory.includes('Winterwear')} onChange={toggleSubCategory} /> Winterwear
             </p>
           </div>
         </div>
