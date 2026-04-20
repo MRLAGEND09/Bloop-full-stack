@@ -64,6 +64,11 @@ const Sidebar = ({ newOrderCount, setNewOrderCount, newPendingCount }) => {
           <p className='hidden md:block'>Reviews</p>
         </NavLink>
 
+        <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/support-messages'>
+          <i className='fas fa-headset text-indigo-600'></i>
+          <p className='hidden md:block'>Support Messages</p>
+        </NavLink>
+
         <NavLink className='flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/sales-report'>
           <i className='fas fa-chart-bar text-gray-600'></i>
           <p className='hidden md:block'>Sales Report</p>
