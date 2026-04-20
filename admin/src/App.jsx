@@ -18,6 +18,7 @@ import notificationSound from './assets/notification.mp3'
 import SalesReport from './pages/SalesReport'
 import PendingOrders from './pages/PendingOrders'
 import AbandonedCarts from './pages/AbandonedCarts'
+import SupportMessages from './pages/SupportMessages'
 
 
 
@@ -108,6 +109,7 @@ const App = () => {
                 <Route path='/subscribers' element={<Subscribers token={token} />} />
                 <Route path='/reviews' element={<Reviews token={token} />} />
                 <Route path='/pending-orders' element={<PendingOrders token={token} setNewPendingCount={setNewPendingCount} />} />
+                <Route path='/support-messages' element={<SupportMessages token={token} />} />
               </Routes>
             </div>
           </div>
