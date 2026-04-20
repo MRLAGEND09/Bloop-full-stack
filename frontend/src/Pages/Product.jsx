@@ -44,7 +44,7 @@ const Product = () => {
 
   useEffect(() => {
     if (productData?._id) {
-      trackProductView(productData._id)
+      trackProductView(productData._id, productData)
     }
   }, [productData?._id])
 
