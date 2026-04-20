@@ -3,6 +3,8 @@ import bcrypt from "bcrypt"
 import jwt from 'jsonwebtoken'
 import userModel from "../models/userModel.js";
 import { v2 as cloudinary } from 'cloudinary'
+import path from 'path'
+import nodemailer from 'nodemailer'
 
 const createToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET)
@@ -23,6 +25,37 @@ const tempEmailDomains = [
     'tempail.com', 'spamgourmet.net'
 ]
 
+const generateVerificationCode = () => `${Math.floor(100000 + Math.random() * 900000)}`
+
+const sendVerificationEmail = async (email, name, code) => {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.log('EMAIL_USER or EMAIL_PASS is missing. Skipping verification email send.')
+        return
+    }
+
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        }
+    })
+
+    await transporter.sendMail({
+        from: `"BLOOP Fashion" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Verify your BLOOP account',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
+                <h2 style="margin-bottom: 8px;">Welcome to BLOOP, ${name || 'there'}!</h2>
+                <p style="color: #444; line-height: 1.5;">Use this verification code to activate your account:</p>
+                <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 16px 0;">${code}</div>
+                <p style="color: #666; font-size: 13px;">This code expires in 10 minutes.</p>
+            </div>
+        `
+    })
+}
+
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -32,6 +65,13 @@ const loginUser = async (req, res) => {
         }
         if (user.provider && user.provider !== 'manual') {
             return res.json({ success: false, message: `Please login with ${user.provider}` })
+        }
+        if (!user.isVerified) {
+            return res.json({
+                success: false,
+                requiresVerification: true,
+                message: 'Please verify your email before login.'
+            })
         }
         const isMatch = await bcrypt.compare(password, user.password)
         if (isMatch) {
@@ -65,17 +105,104 @@ const registerUser = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
+        const verificationCode = generateVerificationCode()
+        const verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
         const newUser = new userModel({
             name,
             email,
             password: hashedPassword,
-            provider: 'manual'
+            provider: 'manual',
+            isVerified: false,
+            verificationCode,
+            verificationCodeExpiresAt
         })
-        const user = await newUser.save()
-        const token = createToken(user._id)
-        res.json({ success: true, token })
+
+        await newUser.save()
+        await sendVerificationEmail(email, name, verificationCode)
+
+        res.json({
+            success: true,
+            requiresVerification: true,
+            message: 'Verification code sent to your email.'
+        })
     } catch (error) {
         console.log(error);
+        res.json({ success: false, message: error.message })
+    }
+}
+
+const verifyEmailCode = async (req, res) => {
+    try {
+        const { email, code } = req.body
+        if (!email || !code) {
+            return res.json({ success: false, message: 'Email and code are required' })
+        }
+
+        const user = await userModel.findOne({ email })
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' })
+        }
+
+        if (user.isVerified) {
+            const token = createToken(user._id)
+            return res.json({ success: true, token, message: 'Already verified' })
+        }
+
+        if (!user.verificationCode || !user.verificationCodeExpiresAt) {
+            return res.json({ success: false, message: 'No verification code found. Please resend code.' })
+        }
+
+        if (new Date(user.verificationCodeExpiresAt).getTime() < Date.now()) {
+            return res.json({ success: false, message: 'Verification code expired. Please resend code.' })
+        }
+
+        if (String(user.verificationCode) !== String(code).trim()) {
+            return res.json({ success: false, message: 'Invalid verification code' })
+        }
+
+        user.isVerified = true
+        user.verificationCode = ''
+        user.verificationCodeExpiresAt = null
+        await user.save()
+
+        const token = createToken(user._id)
+        return res.json({ success: true, token, message: 'Email verified successfully' })
+    } catch (error) {
+        console.log(error)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+const resendVerificationCode = async (req, res) => {
+    try {
+        const { email } = req.body
+        if (!email) {
+            return res.json({ success: false, message: 'Email is required' })
+        }
+
+        const user = await userModel.findOne({ email })
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' })
+        }
+
+        if (user.provider !== 'manual') {
+            return res.json({ success: false, message: `Please login with ${user.provider}` })
+        }
+
+        if (user.isVerified) {
+            return res.json({ success: false, message: 'This email is already verified' })
+        }
+
+        const verificationCode = generateVerificationCode()
+        user.verificationCode = verificationCode
+        user.verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000)
+        await user.save()
+
+        await sendVerificationEmail(user.email, user.name, verificationCode)
+        return res.json({ success: true, message: 'Verification code resent successfully' })
+    } catch (error) {
+        console.log(error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -124,10 +251,10 @@ const socialLogin = async (req, res) => {
         const { name, email, avatar, uid, provider } = req.body;
         let user = await userModel.findOne({ email })
         if (!user) {
-            user = new userModel({ name, email, password: uid, avatar, provider })
+            user = new userModel({ name, email, password: uid, avatar, provider, isVerified: true })
             await user.save()
         } else {
-            await userModel.findByIdAndUpdate(user._id, { avatar, provider })
+            await userModel.findByIdAndUpdate(user._id, { avatar, provider, isVerified: true })
         }
         const token = createToken(user._id)
         res.json({ success: true, token })
@@ -193,6 +320,29 @@ const uploadAvatar = async (req, res) => {
         res.json({ success: true, avatar: result.secure_url })
     } catch (error) {
         console.log('Avatar upload error:', error)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+const uploadAvatarFile = async (req, res) => {
+    try {
+        const userId = req.body?.userId || req.userId
+        const file = req.file
+
+        if (!userId) {
+            return res.json({ success: false, message: 'User not found' })
+        }
+
+        if (!file) {
+            return res.json({ success: false, message: 'No avatar file uploaded' })
+        }
+
+        const avatarPath = path.posix.join('/uploads', file.filename)
+        await userModel.findByIdAndUpdate(userId, { avatar: avatarPath })
+
+        res.json({ success: true, avatar: avatarPath, path: avatarPath })
+    } catch (error) {
+        console.log('Avatar file upload error:', error)
         res.json({ success: false, message: error.message })
     }
 }
@@ -332,8 +482,9 @@ const updatePreferences = async (req, res) => {
 
 export {
     loginUser, registerUser, adminLogin, socialLogin,
+    verifyEmailCode, resendVerificationCode,
     getUserProfile, updateProfile, changePassword,
-    uploadAvatar, deleteAddress, deleteAccount
+    uploadAvatar, uploadAvatarFile, deleteAddress, deleteAccount
     , addShippingAddress, listShippingAddresses, removeShippingAddress,
     savePaymentMethod, listPaymentMethods, updatePreferences
 }
